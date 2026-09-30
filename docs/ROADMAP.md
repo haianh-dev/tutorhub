@@ -91,4 +91,5 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 ## Nhật ký trạng thái (cập nhật cuối mỗi phiên làm việc)
 | Ngày | Task | Trạng thái | Bằng chứng (lệnh test/kết quả) | Ghi chú |
 |---|---|---|---|---|
-| — | — | — | — | — |
+| 2026-09-30 | T0.1 | DONE | git init; commit dda1e53; cấu trúc thư mục backend & frontend | Hoàn thành T0.1 |
+

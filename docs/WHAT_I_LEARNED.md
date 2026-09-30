@@ -63,3 +63,23 @@
 - Sử dụng Tailwind CSS v4 với `@tailwindcss/vite` để tối ưu tốc độ build và tinh giản file cấu hình.
 - Phân chia `AppLayout` với responsive drawer hỗ trợ tốt cả mobile (màn hình nhỏ từ 375px) theo quy ước frontend trong `AGENTS.md`.
 
+---
+
+## 🛠️ Tips & Debugging Thường Gặp
+
+### Lỗi: `Web server failed to start. Port 8080 was already in use.`
+- **Nguyên nhân:** Có tiến trình khác (hoặc backend Spring Boot trước đó chạy ngầm / daemon) đang chiếm giữ cổng `8080`, khiến Tomcat không thể bind cổng khi khởi động từ IDE hoặc terminal.
+- **Cách xử lý trên Windows (PowerShell):**
+  1. Tìm PID (Process ID) của tiến trình đang chiếm port:
+     ```powershell
+     Get-NetTCPConnection -LocalPort 8080
+     # hoặc:
+     netstat -ano | findstr :8080
+     ```
+  2. Tắt tiến trình đó theo PID:
+     ```powershell
+     Stop-Process -Id <PID> -Force
+     # hoặc dùng lệnh Command Prompt:
+     taskkill /PID <PID> /F
+     ```
+

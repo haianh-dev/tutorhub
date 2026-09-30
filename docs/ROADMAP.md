@@ -93,4 +93,5 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 |---|---|---|---|---|
 | 2026-09-30 | T0.1 | DONE | git init; commit dda1e53; cấu trúc thư mục backend & frontend | Hoàn thành T0.1 |
 | 2026-09-30 | T0.2 | DONE | `mvn verify` thành công (Build Success); test Testcontainers tạm thời disabled | Đã setup POM, YML, Test class, Flyway |
+| 2026-09-30 | T0.3 | DONE | `docker compose up -d db` → healthy; `mvn spring-boot:run -Dspring-boot.run.profiles=dev` → Started; `/actuator/health` = UP; Flyway V1 validated | docker-compose.yml, application-dev.yml, .env |
 

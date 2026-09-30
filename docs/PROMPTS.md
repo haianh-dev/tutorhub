@@ -20,7 +20,7 @@ Chưa viết code. Nêu mâu thuẫn hoặc thông tin thiếu nếu có.
 Đọc toàn bộ docs/. Hãy đóng vai Product Analyst kiêm Architect phản biện:
 1. Liệt kê mâu thuẫn giữa các tài liệu (schema vs API vs requirements).
 2. Liệt kê giả định chưa xác nhận và rủi ro.
-3. Trả lời/nêu phương án cho các OPEN QUESTIONS trong PROJECT_BRIEF §9.
+3. Đối chiếu với các quyết định đã chốt trong PROJECT_BRIEF §9.
 4. Đề xuất chỉnh sửa cụ thể (diff) cho từng file.
 Không tự đổi yêu cầu đã CONFIRMED. Không viết code. Hỏi tôi trước khi chốt.
 ```

@@ -33,9 +33,13 @@ AI chỉ được coi `CONFIRMED` là ràng buộc. `PROPOSED` phải hỏi lạ
 | D-26 | CONFIRMED | Định vị: công cụ hỗ trợ gia sư quản lý lịch và lớp; không phải sàn/nền tảng phân phối gia sư (không danh bạ, tìm kiếm, đánh giá, ghép gia sư–học sinh) | Người dùng xác nhận 2026-09-30 |
 | D-27 | CONFIRMED | Bốn vai trò: ADMIN, TUTOR, STUDENT, PARENT; ADMIN có toàn quyền truy cập mọi tài nguyên | Người dùng yêu cầu (2026-09-30) cho quản trị hệ thống |
 | D-28 | CONFIRMED | Học sinh (STUDENT) được xem báo cáo tiến độ đã công bố (PUBLISHED) của chính mình | Thống nhất giữa bảng phân quyền và Portal Dashboard (2026-09-30) |
+| D-29 | CONFIRMED | Quên mật khẩu giải quyết bằng link đặt lại mật khẩu do gia sư/ADMIN tạo, gửi qua Zalo/tin nhắn (không tích hợp gửi email tự động/SMTP ở MVP) | MVP chưa cần hệ thống gửi email tự động (D-21, PROJECT_BRIEF §9). Gia sư quản lý lớp tạo link cho học sinh/phụ huynh của mình; ADMIN tạo cho mọi user (2026-09-30) |
+| D-30 | CONFIRMED | Điểm số dùng thang điểm 10 cố định (0 đến 10), không dùng hệ số (trọng số) trong MVP; hỗ trợ 5 loại bài tập: HOMEWORK, QUIZ, EXAM, MOCK_TEST, OTHER | Thống nhất với PROJECT_BRIEF §9 mục 9-10 (2026-09-30). Đơn giản hóa nhập điểm và công thức điểm TB cho MVP |
+| D-31 | CONFIRMED | Khởi tạo tài khoản ADMIN qua seed dữ liệu khi deploy (biến môi trường `ADMIN_EMAIL`, `ADMIN_DEFAULT_PASSWORD`); ADMIN tạo lớp học có quyền chỉ định `tutorId` | Đảm bảo hệ thống có tài khoản quản trị đầu tiên mà không mở public register cho ADMIN; giải quyết quyền sở hữu `classes.tutor_id` khi ADMIN tạo lớp (2026-09-30) |
 
 ## Câu hỏi còn mở
-Xem `PROJECT_BRIEF.md` §9. Khi người dùng trả lời, chuyển mục tương ứng sang `CONFIRMED` và ghi ngày.
+Toàn bộ các câu hỏi mở ban đầu đã được người dùng chốt đầy đủ tại `PROJECT_BRIEF.md §9` (ngày 2026-09-30). Mọi phát sinh mới trong quá trình triển khai phải tuân thủ quy trình hỏi người dùng trước khi quyết định.
 
 ## Cách ghi quyết định mới
 Thêm dòng mới với ID tăng dần; nếu thay đổi quyết định cũ, đánh dấu dòng cũ `SUPERSEDED` và ghi ID thay thế. Không xóa dòng cũ.
+

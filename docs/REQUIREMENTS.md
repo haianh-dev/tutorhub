@@ -27,15 +27,15 @@ Quy ước: `FR-x` = yêu cầu chức năng, `NFR-x` = phi chức năng, `BR-x`
 - FR-1.1 Gia sư tự đăng ký bằng email + mật khẩu.
 - FR-1.2 Học sinh/phụ huynh tạo tài khoản qua **lời mời** (token dùng một lần, hết hạn 7 ngày) do gia sư tạo. [CONFIRMED]
 - FR-1.3 Đăng nhập trả access token (JWT ngắn hạn) + refresh token.
-- FR-1.4 Đăng xuất, đổi mật khẩu.
-- **AC:** email trùng → 409; mật khẩu < 8 ký tự → 400; sai mật khẩu → 401 (không nói rõ email hay mật khẩu sai); token lời mời hết hạn/đã dùng → 410/400; mật khẩu lưu bằng BCrypt.
+- FR-1.4 Đăng xuất, đổi mật khẩu. Cơ chế đặt lại mật khẩu: do gia sư tạo link reset mật khẩu cho học sinh/phụ huynh trong lớp của mình (hoặc ADMIN tạo cho mọi user) gửi qua Zalo/tin nhắn (không gửi email SMTP ở MVP); người nhận mở link đặt mật khẩu mới. [CONFIRMED: D-29]
+- **AC:** email trùng → 409; mật khẩu < 8 ký tự → 400; sai mật khẩu → 401 (không nói rõ email hay mật khẩu sai); token lời mời / đặt lại mật khẩu hết hạn/đã dùng → 410/400; mật khẩu lưu bằng BCrypt.
 
 ### FR-2 Lớp học
 - FR-2.1 Tạo lớp: tên, môn (Toán/Lý/khác), mô tả, **loại lớp** (`ONE_ON_ONE` = 1:1, hoặc `GROUP` = nhóm từ 2 học sinh), trạng thái (ACTIVE/ARCHIVED).
 - FR-2.2 Sửa, lưu trữ (archive) lớp; xóa mềm, không xóa cứng khi đã có buổi học/điểm.
 - FR-2.3 Thêm/bỏ học sinh khỏi lớp (enrollment); một học sinh không thể ghi danh 2 lần vào cùng lớp.
 - FR-2.4 Danh sách lớp, tìm kiếm theo tên, lọc theo trạng thái, phân trang.
-- FR-2.5 Lớp `ONE_ON_ONE` chỉ có tối đa 1 học sinh đang học. Lớp `GROUP` không giới hạn số học sinh; nếu đang có dưới 2 học sinh thì chỉ hiện cảnh báo (không chặn, vì gia sư cần tạo lớp trước rồi thêm học sinh dần). **[ASSUMPTION]**
+- FR-2.5 Lớp `ONE_ON_ONE` chỉ có tối đa 1 học sinh đang học. Lớp `GROUP` không giới hạn số học sinh; nếu đang có dưới 2 học sinh thì chỉ hiện cảnh báo (không chặn, vì gia sư cần tạo lớp trước rồi thêm học sinh dần). **[CONFIRMED: D-23, D-24]**
 - FR-2.6 Đổi loại lớp: `ONE_ON_ONE` → `GROUP` luôn được; `GROUP` → `ONE_ON_ONE` chỉ khi có tối đa 1 học sinh đang học.
 - **AC:** tên rỗng → 400; loại lớp thiếu/không hợp lệ → 400; gia sư B gọi API lớp của gia sư A → 404; ghi danh trùng → 409; thêm học sinh thứ 2 vào lớp 1:1 → 422 `ONE_ON_ONE_FULL`; đổi `GROUP` → `ONE_ON_ONE` khi có ≥ 2 học sinh đang học → 422.
 
@@ -43,7 +43,7 @@ Quy ước: `FR-x` = yêu cầu chức năng, `NFR-x` = phi chức năng, `BR-x`
 - FR-3.1 Tạo lịch lặp hàng tuần (thứ, giờ bắt đầu/kết thúc, ngày hiệu lực) → sinh các buổi học (session) cụ thể.
 - FR-3.2 Tạo/sửa/hủy buổi học đơn lẻ; buổi có trạng thái SCHEDULED / COMPLETED / CANCELLED, chủ đề, ghi chú.
 - FR-3.3 **Chống trùng:** không cho một gia sư có hai buổi (không bị hủy) chồng thời gian, kể cả tạo đồng thời.
-- FR-3.4 Cảnh báo (không chặn) khi một học sinh bị chồng lịch giữa hai lớp. **[ASSUMPTION]**
+- FR-3.4 Cảnh báo (không chặn) khi một học sinh bị chồng lịch giữa hai lớp. **[CONFIRMED]**
 - FR-3.5 Xem lịch theo tuần/tháng (gia sư), lịch của tôi (học sinh), lịch của con (phụ huynh).
 - **AC:** `end_at <= start_at` → 400; buổi chồng giờ với buổi khác của cùng gia sư → 409 kèm buổi xung đột; hai request tạo buổi trùng cùng lúc chỉ một thành công; buổi CANCELLED không gây xung đột; hai buổi liền kề (kết thúc 10:00, bắt đầu 10:00) **không** xung đột.
 
@@ -54,15 +54,15 @@ Quy ước: `FR-x` = yêu cầu chức năng, `NFR-x` = phi chức năng, `BR-x`
 - **AC:** chỉ học sinh đã ghi danh vào lớp mới được điểm danh; mỗi (buổi, học sinh) chỉ có 1 bản ghi; bulk lỗi giữa chừng thì rollback toàn bộ; chỉ gia sư của lớp được điểm danh.
 
 ### FR-5 Bài tập và điểm số
-- FR-5.1 Giao bài tập cho lớp: tiêu đề, mô tả, hạn nộp, điểm tối đa, loại (HOMEWORK/QUIZ/EXAM).
+- FR-5.1 Giao bài tập cho lớp: tiêu đề, mô tả, hạn nộp, loại (HOMEWORK/QUIZ/EXAM/MOCK_TEST/OTHER). Thang điểm 10 cố định (không dùng hệ số, không có max_score biến thiên). [CONFIRMED: D-30]
 - FR-5.2 Tự tạo bản ghi điểm (chưa chấm) cho mọi học sinh trong lớp khi giao bài; học sinh ghi danh sau cũng được bổ sung.
 - FR-5.3 Nhập/sửa điểm và nhận xét từng học sinh; nhập điểm hàng loạt.
 - FR-5.4 Trạng thái từng bài của học sinh: ASSIGNED, SUBMITTED, GRADED, MISSING.
-- **AC:** điểm < 0 hoặc > điểm tối đa → 400; học sinh thấy điểm của mình sau khi gia sư lưu; không thấy điểm của bạn.
+- **AC:** điểm < 0 hoặc > 10 → 400; học sinh thấy điểm của mình sau khi gia sư lưu; không thấy điểm của bạn.
 
 ### FR-6 Học phí theo số buổi (chỉ theo dõi, không xử lý tiền)
-**Nguyên tắc [CONFIRMED]:** web không lưu số tiền, đơn giá, hình thức thanh toán. Gia sư và phụ huynh tự trao đổi học phí qua Zalo/tin nhắn. Web chỉ ghi **đợt học phí** (số buổi) và ô tích **đã nộp / chưa nộp**.
-- FR-6.1 Gia sư mở **đợt học phí** cho một học sinh trong một lớp: số buổi $N \ge 1$, ghi chú tùy chọn; mặc định trạng thái `UNPAID`. Mỗi học sinh trong lớp nhóm có các đợt riêng, độc lập với bạn cùng lớp. **[ASSUMPTION: đợt N buổi]**
+**Nguyên tắc [CONFIRMED]:** web không lưu số tiền, đơn giá, hình thức thanh toán. Gia sư và phụ huynh tự trao đổi học phí qua Zalo/tin nhắn. Web chỉ ghi **đợt học phí** (số buổi) và ô tích **đã nộp / chưa nộp**. Tiện ích tạo và sao chép tin nhắn nhắc học phí có sẵn để gia sư gửi Zalo.
+- FR-6.1 Gia sư mở **đợt học phí** cho một học sinh trong một lớp: số buổi $N \ge 1$, ghi chú tùy chọn; mặc định trạng thái `UNPAID`. Mỗi học sinh trong lớp nhóm có các đợt riêng, độc lập với bạn cùng lớp. **[CONFIRMED: D-22]**
 - FR-6.2 Tích `PAID` / bỏ tích về `UNPAID` cho từng đợt; lưu thời điểm tích; thao tác lặp lại không gây lỗi.
 - FR-6.3 Tự tính buổi đã học và còn lại (truy vấn, không lưu cột dẫn xuất). Gọi $U$ là số buổi đã học của học sinh trong lớp, $N_k$ là số buổi của đợt thứ $k$ (xếp theo thời gian tạo, không tính đợt đã void):
 
@@ -72,7 +72,7 @@ $$\text{remaining} = \sum_k N_k - U$$
 
 $$u_k = \min\!\Big(N_k,\ \max\!\big(0,\ U - \sum_{j<k} N_j\big)\Big)$$
 
-  trong đó $u_k$ là số buổi đã dùng của đợt $k$. `U` = số buổi `COMPLETED` mà học sinh có điểm danh `PRESENT`, `LATE` hoặc `ABSENT_UNEXCUSED`. **[ASSUMPTION]**
+  trong đó $u_k$ là số buổi đã dùng của đợt $k$. `U` = số buổi `COMPLETED` mà học sinh có điểm danh `PRESENT`, `LATE` hoặc `ABSENT_UNEXCUSED`. **[CONFIRMED: D-22]**
 - FR-6.4 Cảnh báo hiển thị cho gia sư (để gia sư tự nhắn Zalo cho phụ huynh): `CYCLE_LOW` khi đợt hiện tại còn $N_k - u_k \le 2$ buổi; `CYCLE_DONE_UNPAID` khi đợt đã học đủ $N$ buổi mà vẫn `UNPAID`; `NO_OPEN_CYCLE` khi $U > \sum_k N_k$ (đã học vượt, chưa mở đợt mới).
 - FR-6.5 Sửa số buổi/ghi chú của đợt; hủy đợt (void, không xóa cứng).
 - FR-6.6 Học sinh/phụ huynh chỉ xem: đợt hiện tại, số buổi đã học/còn lại, trạng thái đã nộp/chưa nộp.
@@ -83,10 +83,11 @@ $$u_k = \min\!\Big(N_k,\ \max\!\big(0,\ U - \sum_{j<k} N_j\big)\Big)$$
 - FR-7.2 Trạng thái DRAFT → PUBLISHED; phụ huynh chỉ thấy PUBLISHED.
 - FR-7.3 Báo cáo lưu **snapshot dữ liệu** tại thời điểm công bố (không đổi khi điểm sửa sau đó).
 - FR-7.4 Xuất PDF (báo cáo) và CSV (điểm danh, điểm, trạng thái học phí).
-- Công thức điểm trung bình (có hệ số $w_i$, mặc định $w_i = 1$):
+- Công thức điểm trung bình (trung bình cộng thang điểm 10, không dùng hệ số):
 
-$$\bar{s} = \frac{\sum_i s_i\, w_i}{\sum_i w_i}$$
+$$\bar{s} = \frac{1}{m} \sum_{i=1}^m s_i$$
 
+  trong đó $m$ là số đầu điểm đã chấm của học sinh trong khoảng thời gian báo cáo.
   Tỉ lệ đi học: $\text{attendance rate} = \dfrac{\text{PRESENT} + \text{LATE}}{\text{COMPLETED sessions}}$
 - **AC:** không có điểm nào → hiển thị "chưa có dữ liệu" (không chia cho 0); phụ huynh không xem được báo cáo DRAFT hoặc của học sinh khác.
 

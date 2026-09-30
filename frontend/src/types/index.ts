@@ -44,6 +44,29 @@ export interface Session {
 
 export type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT_EXCUSED' | 'ABSENT_UNEXCUSED';
 
+export type AssignmentType = 'HOMEWORK' | 'QUIZ' | 'EXAM' | 'MOCK_TEST' | 'OTHER';
+export type AssignmentStatus = 'ASSIGNED' | 'SUBMITTED' | 'GRADED' | 'MISSING';
+
+export interface Assignment {
+  id: number;
+  classId: number;
+  title: string;
+  description?: string;
+  type: AssignmentType;
+  dueAt?: string;
+  createdAt: string;
+}
+
+export interface AssignmentScore {
+  id: number;
+  assignmentId: number;
+  studentId: number;
+  status: AssignmentStatus;
+  score?: number; // Thang 10 (0.00 <= score <= 10.00), không dùng hệ số (D-30)
+  feedback?: string;
+  gradedAt?: string;
+}
+
 export interface ApiProblemDetail {
   type?: string;
   title?: string;

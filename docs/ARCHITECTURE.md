@@ -27,6 +27,7 @@
 - Monolith module hóa theo tính năng (không dùng microservice).
 - Phân lớp: `controller` (HTTP, DTO) → `service` (nghiệp vụ, transaction, kiểm tra quyền sở hữu) → `repository` (truy cập dữ liệu). Entity không trả trực tiếp ra API, luôn qua DTO (record).
 - Quy tắc quyền sở hữu nằm ở **service** (ví dụ `ClassAccessPolicy`), không rải trong controller.
+- **Vai trò ADMIN:** Được seed tự động khi deploy (từ biến môi trường `ADMIN_EMAIL`, `ADMIN_DEFAULT_PASSWORD`). ADMIN có toàn quyền (bỏ qua ownership filter), xem/quản lý mọi lớp học, tạo link reset mật khẩu cho bất kỳ user nào, và khi tạo lớp học có quyền chỉ định `tutor_id` (gia sư phụ trách).
 
 ## 3. Cấu trúc repo
 ```
@@ -86,6 +87,10 @@ invitations(
   student_id BIGINT NULL REFERENCES users,          -- dùng khi mời PARENT liên kết với con
   expires_at NOT NULL, used_at NULL, created_at)
 
+password_reset_tokens(                             -- link đặt lại mật khẩu do gia sư/ADMIN tạo (không dùng email SMTP ở MVP)
+  id, user_id BIGINT NOT NULL REFERENCES users, token_hash UNIQUE NOT NULL,
+  expires_at NOT NULL, used_at NULL, created_at)
+
 parent_students(parent_id REFERENCES users, student_id REFERENCES users, PRIMARY KEY(parent_id, student_id))
 
 classes(
@@ -118,14 +123,13 @@ attendance(
 
 assignments(
   id, class_id REFERENCES classes, title NOT NULL, description,
-  type CHECK (type IN ('HOMEWORK','QUIZ','EXAM')), due_at, max_score NUMERIC(5,2) CHECK (max_score > 0),
-  weight NUMERIC(4,2) DEFAULT 1 CHECK (weight > 0), created_at)
+  type CHECK (type IN ('HOMEWORK','QUIZ','EXAM','MOCK_TEST','OTHER')), due_at, created_at) -- Thang điểm 10 cố định, không dùng hệ số (D-30)
 
 assignment_scores(
   id, assignment_id REFERENCES assignments, student_id REFERENCES users,
   status CHECK (status IN ('ASSIGNED','SUBMITTED','GRADED','MISSING')),
-  score NUMERIC(5,2) NULL CHECK (score >= 0), feedback, graded_at NULL,
-  UNIQUE (assignment_id, student_id))    -- score <= max_score kiểm tra ở service
+  score NUMERIC(4,2) NULL CHECK (score >= 0 AND score <= 10), feedback, graded_at NULL,
+  UNIQUE (assignment_id, student_id))
 
 tuition_cycles(                      -- đợt học phí; KHÔNG có cột tiền (D-21)
   id, enrollment_id REFERENCES class_enrollments,

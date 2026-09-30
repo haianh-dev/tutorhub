@@ -3,7 +3,7 @@
 ## 1. Chiến lược
 | Tầng | Công cụ | Phạm vi |
 |---|---|---|
-| Unit (backend) | JUnit 5, Mockito | Logic thuần: tính buổi còn lại, điểm TB có hệ số, tỉ lệ đi học, policy quyền |
+| Unit (backend) | JUnit 5, Mockito | Logic thuần: tính buổi còn lại, điểm TB thang 10 không hệ số, tỉ lệ đi học, policy quyền |
 | Integration (backend) | Spring Boot Test + Testcontainers PostgreSQL | Repository, migration, transaction, exclusion constraint, security |
 | API | MockMvc / RestAssured | Status code, định dạng lỗi, phân quyền theo role |
 | Frontend | Vitest + React Testing Library | Form validation, route guard, hiển thị lỗi 409, trạng thái rỗng/loading |
@@ -19,6 +19,7 @@ Test DB dùng PostgreSQL thật qua Testcontainers (không dùng H2, vì cần `
 - Login đúng/sai → 200/401; thông báo lỗi không tiết lộ email tồn tại.
 - Token hết hạn → 401; refresh token bị thu hồi → không dùng lại được.
 - Lời mời: hợp lệ; hết hạn; đã dùng; PARENT mời cho học sinh không thuộc lớp của gia sư → 403/422.
+- Đặt lại mật khẩu: link hợp lệ → 200 (đổi được mật khẩu mới); link hết hạn / đã dùng → 400/410.
 - Mật khẩu không xuất hiện trong response và log.
 
 ### Phân quyền (chạy cho MỌI nhóm endpoint)
@@ -26,7 +27,10 @@ Test DB dùng PostgreSQL thật qua Testcontainers (không dùng H2, vì cần `
 - TUTOR B truy cập lớp/buổi/điểm/học phí/báo cáo của TUTOR A → 404.
 - STUDENT đọc dữ liệu của học sinh khác → 404/403.
 - PARENT đọc dữ liệu của học sinh không phải con → 404/403; PARENT xem báo cáo DRAFT → không thấy.
-- Client gửi `tutorId`/`studentId` giả trong body → bị bỏ qua hoặc từ chối.
+- ADMIN truy cập/sửa mọi lớp/buổi/học phí/báo cáo của bất kỳ gia sư nào → 200 (bypass ownership).
+- ADMIN tạo lớp học với `tutorId` được chỉ định → 201; ADMIN không truyền `tutorId` → 400.
+- ADMIN tạo link reset mật khẩu cho bất kỳ user nào (kể cả gia sư) → 200.
+- Client gửi `tutorId`/`studentId` giả trong body (khi không phải ADMIN) → bị bỏ qua hoặc từ chối.
 
 ### Lớp học
 - Tạo/sửa/archive hợp lệ; tên rỗng → 400; thiếu/sai `classType` → 400; ghi danh trùng → 409; bỏ học sinh rồi ghi danh lại hoạt động đúng.
@@ -48,8 +52,8 @@ Test DB dùng PostgreSQL thật qua Testcontainers (không dùng H2, vì cần `
 - Bulk hợp lệ; học sinh chưa ghi danh → 422; lặp (buổi, học sinh) → cập nhật, không tạo bản ghi thứ hai; lỗi giữa chừng → rollback toàn bộ.
 
 ### Bài tập & điểm
-- Giao bài tạo score row cho mọi học sinh đang ghi danh; học sinh ghi danh sau được bổ sung.
-- Điểm biên: $0$, $\text{max}$, $\text{max}+0.01$ (từ chối), âm (từ chối).
+- Giao bài (chọn 1 trong 5 loại: HOMEWORK, QUIZ, EXAM, MOCK_TEST, OTHER) tạo score row cho mọi học sinh đang ghi danh; học sinh ghi danh sau được bổ sung.
+- Điểm biên thang 10: $0$, $10$, $10.01$ (từ chối), $-0.01$ (từ chối).
 - Xóa bài đã có điểm → 422.
 
 ### Học phí (đợt theo số buổi, chỉ tích đã/chưa nộp)
@@ -78,7 +82,7 @@ Công thức: $\text{remaining}=\sum_k N_k - U$ và $u_k=\min\!\big(N_k,\ \max(0
 ### Báo cáo
 - Khoảng ngày tự chọn: `periodEnd < periodStart` → 400; khoảng 1 ngày; khoảng vắt qua tháng/năm; chỉ tính buổi và điểm nằm trong khoảng.
 - Không có buổi/điểm → "chưa có dữ liệu", không lỗi chia cho 0.
-- Điểm TB có hệ số: ví dụ $s=(8,\,6)$, $w=(1,\,2)$ → $\bar{s}=\dfrac{8\cdot 1+6\cdot 2}{1+2}=\dfrac{20}{3}\approx 6.67$.
+- Điểm TB không hệ số thang 10: ví dụ $s=(8,\,6) \to \bar{s}=\dfrac{8+6}{2}=7.0$.
 - Publish → snapshot cố định; sửa điểm sau đó không làm đổi báo cáo đã publish.
 - PDF tiếng Việt có dấu hiển thị đúng; CSV mở được bằng Excel (UTF-8 BOM).
 

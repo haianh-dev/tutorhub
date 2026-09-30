@@ -18,15 +18,15 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 |---|---|---|---|
 | T1.1 | Migration `users`, `refresh_tokens`; entity + repository | T0.3 | Migration chạy sạch; test repository |
 | T1.2 | Đăng ký gia sư + đăng nhập + JWT + BCrypt | T1.1, T0.5 | AC FR-1 (email trùng, mật khẩu yếu, sai mật khẩu) có test |
-| T1.3 | Refresh/logout/đổi mật khẩu | T1.2 | Refresh token bị thu hồi thì không dùng lại được |
+| T1.3 | Refresh/logout/đổi mật khẩu + sinh link đặt lại mật khẩu cho học sinh/phụ huynh | T1.2 | Refresh token bị thu hồi thì không dùng lại được; link reset mật khẩu hợp lệ/hết hạn |
 | T1.4 | Lời mời (invitations) + accept-invitation cho STUDENT/PARENT + `parent_students` | T1.2 | Token hết hạn/đã dùng bị từ chối; PARENT liên kết đúng con |
 | T1.5 | Security config: role-based + test truy cập trái quyền mẫu | T1.2 | Endpoint sai role → 403, không token → 401 |
-| T1.6 | Frontend: login, đăng ký gia sư, chấp nhận lời mời, route guard theo role | T1.2–T1.4, T0.4 | Chạy được luồng đăng nhập cả 3 vai trò |
+| T1.6 | Frontend: login, đăng ký gia sư, chấp nhận lời mời, đặt lại mật khẩu, route guard theo role | T1.2–T1.4, T0.4 | Chạy được luồng đăng nhập cả 4 vai trò (ADMIN, TUTOR, STUDENT, PARENT) |
 
 ## Phase 2 — Lớp học & học sinh
 | ID | Task | Dep | Điều kiện hoàn thành |
 |---|---|---|---|
-| T2.1 | Migration `classes` (có `class_type`), `class_enrollments`; CRUD lớp + archive | T1.5 | AC FR-2; loại lớp bắt buộc; gia sư B không truy cập lớp gia sư A (test) |
+| T2.1 | Migration `classes` (có `class_type`), `class_enrollments`; CRUD lớp + archive (ADMIN chỉ định tutor_id) | T1.5 | AC FR-2; loại lớp bắt buộc; gia sư B không truy cập lớp gia sư A; ADMIN quản lý được mọi lớp (test) |
 | T2.2 | Ghi danh/bỏ học sinh; danh sách học sinh của lớp; quy tắc lớp 1:1 (tối đa 1) và cảnh báo lớp nhóm dưới 2 | T2.1, T1.4 | Ghi danh trùng → 409; thêm HS thứ 2 vào lớp 1:1 → 422 (kể cả 2 request đồng thời); đổi loại lớp đúng FR-2.6 |
 | T2.3 | Frontend: danh sách lớp, tạo/sửa lớp, quản lý học sinh, tạo link mời | T2.1, T2.2, T1.6 | Thao tác được trên UI |
 
@@ -49,8 +49,8 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 ## Phase 5 — Bài tập & điểm
 | ID | Task | Dep | Điều kiện hoàn thành |
 |---|---|---|---|
-| T5.1 | Migration `assignments`, `assignment_scores`; giao bài + tự tạo score rows | T2.2 | AC FR-5.1–5.2 |
-| T5.2 | Nhập điểm/nhận xét bulk; validate `score <= maxScore` | T5.1 | Test biên (0, max, max+0.01) |
+| T5.1 | Migration `assignments` (5 loại: HOMEWORK, QUIZ, EXAM, MOCK_TEST, OTHER), `assignment_scores`; giao bài + tự tạo score rows (thang điểm 10 cố định, không dùng hệ số) | T2.2 | AC FR-5.1–5.2 |
+| T5.2 | Nhập điểm/nhận xét bulk; validate `0 <= score <= 10` (thang 10 cố định) | T5.1 | Test biên (0, 10, 10.1, -0.1) |
 | T5.3 | Frontend: danh sách bài, bảng nhập điểm | T5.2 | Nhập điểm cả lớp trên UI |
 
 ## Phase 6 — Học phí
@@ -58,12 +58,12 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 |---|---|---|---|
 | T6.1 | Migration `tuition_cycles` (không có cột tiền); mở đợt, tích đã/chưa nộp, void | T2.2 | AC FR-6.1, 6.2, 6.5; test không tồn tại trường tiền trong API |
 | T6.2 | Truy vấn `totalSessions/used/remaining`, phân bổ vào đợt (hàm thuần), cảnh báo `CYCLE_LOW`/`CYCLE_DONE_UNPAID`/`NO_OPEN_CYCLE`, tổng hợp cả lớp | T6.1, T4.1 | Bảng ca kiểm thử trong TEST_PLAN (nhiều đợt, học vượt, void, lớp nhóm) |
-| T6.3 | Frontend: tab học phí trong lớp (đợt, ô tích đã/chưa nộp, cảnh báo sắp hết buổi/chưa nộp) | T6.2 | Hiển thị đúng số liệu; không có ô nhập tiền |
+| T6.3 | Frontend: tab học phí trong lớp (đợt, ô tích đã/chưa nộp, cảnh báo sắp hết buổi/chưa nộp, nút sao chép tin nhắn nhắc học phí để gửi Zalo) | T6.2 | Hiển thị đúng số liệu; không có ô nhập tiền; sao chép đúng mẫu tin nhắn |
 
 ## Phase 7 — Báo cáo & xuất dữ liệu
 | ID | Task | Dep | Điều kiện hoàn thành |
 |---|---|---|---|
-| T7.1 | Truy vấn tổng hợp báo cáo theo khoảng ngày tự chọn (tỉ lệ đi học, điểm TB có hệ số, buổi còn lại, trạng thái học phí) | T4.1, T5.2, T6.2 | Test số liệu; chỉ tính dữ liệu trong khoảng; không chia cho 0 |
+| T7.1 | Truy vấn tổng hợp báo cáo theo khoảng ngày tự chọn (tỉ lệ đi học, điểm TB không hệ số thang 10, buổi còn lại, trạng thái học phí) | T4.1, T5.2, T6.2 | Test số liệu; chỉ tính dữ liệu trong khoảng; không chia cho 0 |
 | T7.2 | Tạo/sửa/publish báo cáo + snapshot JSONB | T7.1 | Sửa điểm sau publish không đổi báo cáo |
 | T7.3 | Xuất PDF báo cáo, CSV điểm danh/điểm/trạng thái học phí | T7.2 | File mở được, đúng tiếng Việt có dấu |
 | T7.4 | Frontend: tạo báo cáo, xem trước, publish, tải PDF/CSV | T7.2, T7.3 | Thao tác được trên UI |
@@ -78,9 +78,10 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 | ID | Task | Dep | Điều kiện hoàn thành |
 |---|---|---|---|
 | T9.1 | Rà soát bảo mật (CORS, secret, rate limit đăng nhập, log) | Phase 8 | Checklist trong TEST_PLAN §6 đạt |
-| T9.2 | Dockerfile production + cấu hình Render/Railway | T9.1 | App chạy trên môi trường thật, migration tự chạy |
+| T9.2 | Dockerfile production + cấu hình Render/Railway (seed tài khoản ADMIN mặc định) | T9.1 | App chạy trên môi trường thật, migration tự chạy |
 | T9.3 | Seed dữ liệu demo (giả), README hướng dẫn, ảnh chụp màn hình | T9.2 | Người lạ chạy được theo README |
-| T9.4 | (Tùy chọn) Email mời/gửi báo cáo, nút "sao chép tin nhắn nhắc học phí" để dán Zalo, E2E Playwright | T9.2 | Chỉ làm khi được duyệt |
+| T9.4 | (Tùy chọn) Email mời/gửi báo cáo tự động, E2E Playwright | T9.2 | Chỉ làm khi được duyệt |
+
 
 ## Mốc đề xuất
 - **M1** Phase 0–2: đăng nhập + quản lý lớp.

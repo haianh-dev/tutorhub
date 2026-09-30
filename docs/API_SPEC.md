@@ -15,6 +15,7 @@ Mã lỗi chung: 400 validation · 401 chưa đăng nhập · 403 sai vai trò �
 | POST | `/auth/logout` | any | thu hồi refresh token |
 | POST | `/auth/accept-invitation` | public | `{token, password, fullName, phone?}` → 201, tự đăng nhập |
 | GET | `/auth/invitations/{token}` | public | kiểm tra lời mời còn hiệu lực → `{role, email, className?}` |
+| POST | `/auth/reset-password` | public | `{token, newPassword}` → 200, đặt lại mật khẩu từ link |
 | GET | `/me` | any | thông tin người dùng hiện tại |
 | PUT | `/me/password` | any | `{currentPassword, newPassword}` |
 
@@ -22,18 +23,19 @@ Mã lỗi chung: 400 validation · 401 chưa đăng nhập · 403 sai vai trò �
 | Method | Path | Role | Mô tả |
 |---|---|---|---|
 | POST | `/invitations` | TUTOR | `{role: STUDENT|PARENT, email?, classId? , studentId?}` → `{link, expiresAt}`. PARENT bắt buộc `studentId` là học sinh trong lớp của gia sư |
+| POST | `/users/{id}/password-reset-link` | TUTOR/ADMIN | tạo link đặt lại mật khẩu cho học sinh/phụ huynh (TUTOR: chỉ tạo cho học sinh/phụ huynh trong lớp của mình; ADMIN: cho mọi user) → `{link, expiresAt}` |
 
 ## 3. Classes & Enrollments
 | Method | Path | Role | Mô tả |
 |---|---|---|---|
-| GET | `/classes?status=&q=` | TUTOR/STUDENT/PARENT | danh sách lớp theo quyền (PARENT: thêm `?studentId=`) |
-| POST | `/classes` | TUTOR | `{name, subject, classType: ONE_ON_ONE\|GROUP, description?}` → 201 (kèm `warnings` nếu GROUP dưới 2 học sinh) |
+| GET | `/classes?status=&q=` | TUTOR/STUDENT/PARENT/ADMIN | danh sách lớp theo quyền (PARENT: thêm `?studentId=`; ADMIN: xem tất cả lớp) |
+| POST | `/classes` | TUTOR/ADMIN | `{name, subject, classType: ONE_ON_ONE\|GROUP, description?, tutorId?}` → 201 (ADMIN bắt buộc truyền `tutorId`; TUTOR tự lấy từ token; cảnh báo nếu GROUP < 2 HS) |
 | GET | `/classes/{id}` | theo quyền | chi tiết + số học sinh |
-| PUT | `/classes/{id}` | TUTOR | cập nhật; đổi `GROUP` → `ONE_ON_ONE` khi có ≥ 2 học sinh đang học → 422 |
-| POST | `/classes/{id}/archive` | TUTOR | lưu trữ lớp |
-| GET | `/classes/{id}/students` | TUTOR | danh sách ghi danh |
-| POST | `/classes/{id}/students` | TUTOR | `{studentId}` → 201; trùng → 409; lớp 1:1 đã có 1 học sinh đang học → 422 `ONE_ON_ONE_FULL` |
-| DELETE | `/classes/{id}/students/{studentId}` | TUTOR | đặt enrollment `LEFT` |
+| PUT | `/classes/{id}` | TUTOR/ADMIN | cập nhật; đổi `GROUP` → `ONE_ON_ONE` khi có ≥ 2 học sinh đang học → 422 |
+| POST | `/classes/{id}/archive` | TUTOR/ADMIN | lưu trữ lớp |
+| GET | `/classes/{id}/students` | TUTOR/ADMIN | danh sách ghi danh |
+| POST | `/classes/{id}/students` | TUTOR/ADMIN | `{studentId}` → 201; trùng → 409; lớp 1:1 đã có 1 học sinh đang học → 422 `ONE_ON_ONE_FULL` |
+| DELETE | `/classes/{id}/students/{studentId}` | TUTOR/ADMIN | đặt enrollment `LEFT` |
 
 ## 4. Schedule & Sessions
 | Method | Path | Role | Mô tả |
@@ -56,13 +58,13 @@ Mã lỗi chung: 400 validation · 401 chưa đăng nhập · 403 sai vai trò �
 ## 6. Assignments & Scores
 | Method | Path | Role | Mô tả |
 |---|---|---|---|
-| POST | `/classes/{id}/assignments` | TUTOR | `{title, description?, type, dueAt?, maxScore, weight?}` → 201, tự tạo score rows |
+| POST | `/classes/{id}/assignments` | TUTOR | `{title, description?, type: HOMEWORK\|QUIZ\|EXAM\|MOCK_TEST\|OTHER, dueAt?}` → 201, tự tạo score rows (thang điểm 10 cố định, không dùng hệ số) |
 | GET | `/classes/{id}/assignments` | theo quyền | danh sách |
 | PUT | `/assignments/{id}` | TUTOR | sửa |
 | DELETE | `/assignments/{id}` | TUTOR | chỉ khi chưa có điểm đã chấm, ngược lại 422 |
 | GET | `/assignments/{id}/scores` | TUTOR | bảng điểm cả lớp |
-| PUT | `/assignments/{id}/scores` | TUTOR | bulk `{scores:[{studentId, score?, status, feedback?}]}`; `score > maxScore` → 400 |
-| GET | `/students/{studentId}/scores?classId=` | theo quyền | điểm của một học sinh |
+| PUT | `/assignments/{id}/scores` | TUTOR | bulk `{scores:[{studentId, score?, status, feedback?}]}`; `score < 0` hoặc `score > 10` → 400 |
+| GET | `/students/{studentId}/scores?classId=` | theo quyền | điểm của một học sinh (thang điểm 10) |
 
 ## 7. Tuition (đợt học phí — chỉ tích đã/chưa nộp, KHÔNG có trường tiền)
 | Method | Path | Role | Mô tả |
@@ -80,7 +82,7 @@ Mã cảnh báo (`alerts[].code`): `CYCLE_LOW` (đợt hiện tại còn ≤ 2 b
 ## 8. Reports
 | Method | Path | Role | Mô tả |
 |---|---|---|---|
-| POST | `/reports` | TUTOR | `{classId, studentId, periodStart, periodEnd, tutorComment?}` → 201 DRAFT (kèm số liệu tính sẵn để xem trước). Khoảng ngày tự chọn; `periodEnd < periodStart` → 400 |
+| POST | `/reports` | TUTOR | `{classId, studentId, periodStart, periodEnd, tutorComment?}` → 201 DRAFT (kèm số liệu tính sẵn: tỉ lệ đi học, điểm TB không hệ số thang 10, buổi còn lại). Khoảng ngày tự chọn; `periodEnd < periodStart` → 400 |
 | GET | `/reports/{id}` | theo quyền | PARENT chỉ thấy PUBLISHED của con |
 | PUT | `/reports/{id}` | TUTOR | sửa khi DRAFT |
 | POST | `/reports/{id}/publish` | TUTOR | chốt snapshot, chuyển PUBLISHED |

@@ -23,7 +23,7 @@ AI chỉ được coi `CONFIRMED` là ràng buộc. `PROPOSED` phải hỏi lạ
 | D-16 | PROPOSED | Flyway cho migration; test bằng Testcontainers PostgreSQL | Cần Postgres thật để test constraint; H2 không đủ |
 | D-17 | PROPOSED | Lưu thời gian UTC (`timestamptz`), hiển thị `Asia/Ho_Chi_Minh` | Tránh lỗi múi giờ |
 | D-18 | PROPOSED | Lỗi trả RFC 7807 kèm `code` ổn định | Frontend hiển thị thông báo tiếng Việt theo `code` |
-| D-19 | PROPOSED | Frontend: Vite, React Router, TanStack Query, React Hook Form + Zod | Phổ biến, ít boilerplate |
+| D-19 | CONFIRMED | Frontend: Vite, React Router, TanStack Query, React Hook Form + Zod, Tailwind CSS v4 | Phổ biến, ít boilerplate. Người dùng duyệt 2026-09-30 |
 | D-20 | PROPOSED | Xóa mềm/lưu trữ (archive/void) thay vì xóa cứng dữ liệu có liên quan | Giữ lịch sử điểm danh, điểm, đợt học phí |
 | D-21 | CONFIRMED | Hệ thống không xử lý tiền: không lưu số tiền/đơn giá/hình thức thanh toán, không thanh toán online. Gia sư và phụ huynh trao đổi học phí qua Zalo/tin nhắn; web chỉ có ô tích đã nộp/chưa nộp | Người dùng xác nhận 2026-09-30. Giảm rủi ro pháp lý/bảo mật, đơn giản hóa schema |
 | D-22 | CONFIRMED | Học phí chia thành đợt N buổi cho mỗi học sinh trong mỗi lớp (`tuition_cycles`); buổi đã học tính dồn vào đợt cũ trước; cảnh báo `CYCLE_LOW`, `CYCLE_DONE_UNPAID`, `NO_OPEN_CYCLE` | Cần để có "buổi đã học/còn lại" mà vẫn chỉ có tích đã/chưa nộp. Người dùng xác nhận 2026-09-30 |

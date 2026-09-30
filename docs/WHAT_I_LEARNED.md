@@ -39,3 +39,27 @@
 - `.env` gitignored, `.env.example` committed — quy ước bảo mật chuẩn: không bao giờ commit secret thật.
 - `DB_URL` dùng giá trị literal thay vì `${VAR}` lồng nhau — vì `.env` không hỗ trợ shell expansion như bash.
 
+---
+
+## Task: T0.4 - Frontend Skeleton (Vite + React + TS + Tailwind)
+
+**Concepts:**
+- **Vite:** Build tool và dev server siêu nhanh dựa trên ES Modules (ESM). Khác với Webpack bundle toàn bộ trước khi chạy, Vite chỉ biên dịch file khi trình duyệt yêu cầu (On-demand compilation).
+- **TypeScript trong React (`react-ts`):** Ràng buộc kiểu dữ liệu tĩnh (`interfaces`, `types`), giảm thiểu lỗi runtime liên quan đến `undefined`, sai kiểu dữ liệu API.
+- **Tailwind CSS v4:** Thế hệ mới nhất của Tailwind, tích hợp trực tiếp qua `@tailwindcss/vite` plugin, không cần cấu hình phức tạp `postcss.config.js` hay `tailwind.config.js`, kích hoạt chỉ bằng `@import "tailwindcss";` trong `index.css`.
+- **SPA Routing (React Router v7 / v6 Data API):** Quản lý điều hướng phía client mà không cần reload lại toàn bộ trang web. Sử dụng `createBrowserRouter` và `RouterProvider`.
+- **TanStack Query (React Query):** Quản lý server state, tự động cache dữ liệu, refetch khi focus/mất mạng, giúp code component không bị lẫn lộn giữa data fetching và UI state.
+
+**Architecture & Config:**
+- Cấu trúc thư mục theo ARCHITECTURE §3:
+  - `src/api/`: cấu hình Axios client, token interceptor.
+  - `src/components/`: UI components dùng chung (Layout, Navigation, v.v.).
+  - `src/features/`: chia theo module nghiệp vụ (auth, classes, schedule, attendance, tuition, reports, portal).
+  - `src/routes/`: cấu hình định tuyến và route guard sau này.
+  - `src/types/`: các interface/type khớp với model hệ thống và RFC 7807 ProblemDetail.
+- `vite.config.ts`: Cấu hình reverse proxy `/api` sang `http://localhost:8080`, tránh lỗi CORS trong môi trường dev.
+
+**Important decision:**
+- Sử dụng Tailwind CSS v4 với `@tailwindcss/vite` để tối ưu tốc độ build và tinh giản file cấu hình.
+- Phân chia `AppLayout` với responsive drawer hỗ trợ tốt cả mobile (màn hình nhỏ từ 375px) theo quy ước frontend trong `AGENTS.md`.
+

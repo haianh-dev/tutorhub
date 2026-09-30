@@ -65,6 +65,29 @@
 
 ---
 
+## Task: T0.5 - Exception Handler Thống Nhất (ProblemDetail RFC 7807)
+
+**Concepts:**
+- **RFC 7807 (Problem Details for HTTP APIs):** Chuẩn quốc tế định nghĩa cấu trúc JSON thống nhất khi trả về lỗi HTTP (`type`, `title`, `status`, `detail`, `instance`). Spring Boot 3 tích hợp sẵn class `ProblemDetail`.
+- **Mã lỗi ổn định (`ErrorCode`):** Thay vì để frontend dựa vào chuỗi message tiếng Anh (dễ thay đổi) để hiển thị thông báo, backend trả về mã `code` dạng enum (`SESSION_CONFLICT`, `VALIDATION_ERROR`, `RESOURCE_NOT_FOUND`). Frontend chỉ cần switch-case theo `code` để hiển thị tiếng Việt.
+- **`@RestControllerAdvice`:** Annotation đánh dấu class xử lý ngoại lệ tập trung (AOP - Aspect-Oriented Programming) cho mọi Controller trong ứng dụng.
+- **Kế thừa `ResponseEntityExceptionHandler`:** Cho phép override lại cách Spring xử lý các lỗi HTTP chuẩn (như `MethodArgumentNotValidException` của Bean Validation) để format theo cấu trúc mong muốn mà không làm mất luồng chuẩn của Spring MVC.
+
+**Architecture & Config:**
+- **Kiến trúc Exception:**
+  - `ErrorCode`: Enum định nghĩa mã lỗi + HTTP status mặc định + title tiếng Anh chuẩn.
+  - `AppException`: RuntimeException cơ sở mang theo `ErrorCode`.
+  - `ResourceNotFoundException` (404) và `DuplicateResourceException` (409): Subclass hỗ trợ ném lỗi nhanh gọn từ tầng Service.
+  - `GlobalExceptionHandler`: Bắt `AppException`, Bean Validation (`MethodArgumentNotValidException`), lỗi DB constraint (`DataIntegrityViolationException`), và fallback `Exception` (500).
+- **Bảo mật thông tin lỗi:** Toàn bộ exception không xác định (500) được ẩn stack trace và message kỹ thuật khỏi response, chỉ log chi tiết ở phía server nhằm tránh lộ thông tin nội bộ (Information Disclosure).
+- `application.yml`: Bật `spring.mvc.problemdetails.enabled: true` để Spring tự động định dạng cả các lỗi do framework quản lý sang RFC 7807.
+
+**Important decision & Debugging tips:**
+- **Spring Security CSRF trong MockMvc Test:** Khi test endpoint `POST` với MockMvc, dù có dùng `@WithMockUser`, request vẫn có thể bị trả về `403 Forbidden` do Spring Security bật CSRF bảo vệ. Khắc phục bằng cách gắn `.with(csrf())` vào request builder.
+- **Bean Validation trả về nhiều lỗi cho cùng 1 field:** Một giá trị input có thể cùng lúc vi phạm nhiều annotation (ví dụ chuỗi rỗng `""` vi phạm cả `@NotBlank` và `@Size(min=1)`), do đó danh sách `errors` cần được xử lý dạng mảng (array) chứ không giả định mỗi field chỉ có 1 lỗi duy nhất.
+
+---
+
 ## 🛠️ Tips & Debugging Thường Gặp
 
 ### Lỗi: `Web server failed to start. Port 8080 was already in use.`

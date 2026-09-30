@@ -1,6 +1,11 @@
 spring:
   application:
     name: TutorHub
+
+  # Enable RFC 7807 ProblemDetail for framework-handled errors
+  mvc:
+    problemdetails:
+      enabled: true
   
   # Database Configuration (PostgreSQL)
   datasource:

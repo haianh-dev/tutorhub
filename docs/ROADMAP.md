@@ -96,4 +96,5 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 | 2026-09-30 | T0.2 | DONE | `mvn verify` thành công (Build Success); test Testcontainers tạm thời disabled | Đã setup POM, YML, Test class, Flyway |
 | 2026-09-30 | T0.3 | DONE | `docker compose up -d db` → healthy; `mvn spring-boot:run -Dspring-boot.run.profiles=dev` → Started; `/actuator/health` = UP; Flyway V1 validated | docker-compose.yml, application-dev.yml, .env |
 | 2026-09-30 | T0.4 | DONE | `npm run build` thành công (tsc -b && vite build); `npm run lint` 0 warning 0 error; preview HTTP 200 | Vite + React + TS + Tailwind v4 + React Router + TanStack Query |
+| 2026-09-30 | T0.5 | DONE | `mvn test -Dtest=GlobalExceptionHandlerTest` → Tests run: 6, Failures: 0, Errors: 0 (BUILD SUCCESS) | GlobalExceptionHandler + AppException + ErrorCode + ResourceNotFoundException + DuplicateResourceException; test 400/404/409/422/500 |
 

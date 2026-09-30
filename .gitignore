@@ -1,0 +1,66 @@
+# =============================================================================
+# TutorHub .gitignore
+# =============================================================================
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# IDE & Editors
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+*.patch
+*.diff
+
+# Environment & Secrets (NEVER COMMIT)
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+!*.env.example
+
+# Java & Maven (Backend)
+backend/target/
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.log
+backend/*.log
+hs_err_pid*
+
+# Node.js & Vite (Frontend)
+frontend/node_modules/
+node_modules/
+frontend/dist/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+
+# Testing & Coverage
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+
+# Temporary files
+tmp/
+temp/

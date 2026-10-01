@@ -109,6 +109,28 @@
 
 ---
 
+## Task: T1.1 - Migration Users, RefreshTokens, Entity & Repository
+
+**Concepts:**
+- **Flyway Versioned Migration (`V2`):** Quản lý tiến hóa schema cơ sở dữ liệu bằng các script SQL có số phiên bản tăng dần (`V{n}__description.sql`). Mỗi lần ứng dụng khởi động, Flyway tự động kiểm tra bảng `flyway_schema_history` và áp dụng các migration mới chưa chạy, đảm bảo đồng nhất tuyệt đối giữa local dev, test và production.
+- **Chuẩn hóa Schema PostgreSQL theo ARCHITECTURE.md:**
+  - `BIGINT GENERATED ALWAYS AS IDENTITY`: Tiêu chuẩn SQL hiện đại thay thế cho `SERIAL` cũ, tự động sinh khóa chính an toàn và ngăn ngừa việc vô tình chèn đè giá trị ID.
+  - `TIMESTAMPTZ` (`timestamp with time zone`): Lưu trữ mốc thời gian chuẩn UTC, tránh rủi ro sai lệch thời gian giữa server và client ở các múi giờ khác nhau.
+  - Check Constraints (`chk_users_role`, `chk_users_status`): Ràng buộc toàn vẹn dữ liệu ngay tại DB (`role IN ('ADMIN','TUTOR','STUDENT','PARENT')`), bảo vệ DB khỏi dữ liệu rác ngay cả khi truy vấn trực tiếp.
+  - Foreign Key `ON DELETE CASCADE` (`refresh_tokens.user_id`): Tự động xóa sạch các refresh token khi tài khoản người dùng bị xóa.
+- **JPA Entity Best Practices:**
+  - `@Enumerated(EnumType.STRING)`: Bắt buộc lưu enum dưới dạng chuỗi tên (`"TUTOR"`, `"ADMIN"`), tuyệt đối không dùng `ORDINAL` vì nếu thêm mới hoặc đổi thứ tự enum trong code Java thì toàn bộ dữ liệu cũ trong DB sẽ bị sai lệch ý nghĩa.
+  - `@PrePersist` & `@PreUpdate`: Tận dụng JPA Entity Lifecycle Callbacks để tự động điền `createdAt` và cập nhật `updatedAt = Instant.now()`.
+
+**Architecture & Config:**
+- **Cấu hình Lombok Annotation Processor trên Java 21:** Khi build bằng Maven trên JDK 21, nếu không khai báo `annotationProcessorPaths` cho `lombok` trong `maven-compiler-plugin`, trình biên dịch `javac` sẽ bỏ qua việc sinh mã cho `@Getter`, `@Setter`, `@Builder`, gây ra lỗi `cannot find symbol: method builder()`.
+- **Kiểm thử `@DataJpaTest` với PostgreSQL thật:**
+  - Bổ sung `@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)` để Spring không cố gắng thay thế PostgreSQL bằng H2 (do dự án quyết định dùng Postgres thật để kiểm tra toàn bộ constraint theo DECISIONS D-16).
+  - Khi test chạy, Flyway tự động áp dụng cả `V1__init.sql` và `V2__create_users_and_refresh_tokens.sql`.
+  - Kiểm thử đầy đủ các kịch bản: lưu/truy vấn entity, `existsByEmail`, `findByRole`, lọc token chưa thu hồi (`revokedAt IS NULL`), xóa token hết hạn, và kiểm tra ném `DataIntegrityViolationException` khi vi phạm Unique constraint.
+
+---
+
 ## 🛠️ Tips & Debugging Thường Gặp
 
 ### Lỗi: `Web server failed to start. Port 8080 was already in use.`

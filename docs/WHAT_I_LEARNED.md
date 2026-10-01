@@ -88,6 +88,27 @@
 
 ---
 
+## Task: T0.6 - CI GitHub Actions (Build & Test Backend + Frontend)
+
+**Concepts:**
+- **CI (Continuous Integration):** Quy trình tự động hóa kiểm tra mã nguồn (build, typecheck, lint, test) ngay khi có code mới được đẩy lên (`push`) hoặc tạo yêu cầu gộp nhánh (`pull_request`). Giúp ngăn chặn code lỗi lọt vào nhánh chính (`main`).
+- **GitHub Actions (Workflows & Jobs):** Hệ thống CI/CD tích hợp sẵn của GitHub. File workflow định dạng YAML đặt tại `.github/workflows/`. Các job độc lập (`backend`, `frontend`) mặc định được chạy song song (parallel) trên các máy ảo riêng biệt (`ubuntu-latest`), tối ưu thời gian phản hồi.
+- **Dependency Caching:** Sử dụng cache của `actions/setup-java` (cache Maven `.m2`) và `actions/setup-node` (cache `~/.npm` theo `package-lock.json`) để tránh tải lại toàn bộ thư viện mỗi lần chạy CI, giảm đáng kể thời gian chạy pipeline.
+
+**Architecture & Config:**
+- **Workflow `.github/workflows/ci.yml`:**
+  - `defaults.run.working-directory`: Thiết lập thư mục gốc cho từng job (`backend` hoặc `frontend`), giúp các step chạy lệnh nội bộ mà không cần lặp lại `cd backend` hay `cd frontend`.
+  - Job `backend`: Chạy trên môi trường Linux có sẵn Docker daemon. Kiểm thử `mvn verify` (chạy cả unit test và SpringBoot integration test với Testcontainers PostgreSQL).
+  - Job `frontend`: Chạy `npm ci`, kiểm tra lint bằng `oxlint` và build production bundle bằng `tsc -b && vite build`.
+- **`npm ci` vs `npm install` trong CI:** Luôn dùng `npm ci` trong môi trường tự động vì lệnh này dựa hoàn toàn vào `package-lock.json`, không bao giờ tự sửa lockfile và đảm bảo tính nhất quán tuyệt đối giữa môi trường dev và CI.
+
+**Important decision & Debugging tips:**
+- **Lỗi `Permission denied` với `mvnw` trên Linux runner:** Trên Windows, Git không tự đánh dấu thuộc tính thực thi (executable bit `+x`) cho file script Unix (`mvnw`). Khi đẩy lên repo và checkout trên Ubuntu, file chỉ có quyền `100644` khiến lệnh `./mvnw` thất bại. Cách khắc phục:
+  1. Chạy `git update-index --chmod=+x backend/mvnw` trực tiếp trên máy dev để Git lưu cờ `100755` vào commit.
+  2. Bổ sung step `run: chmod +x mvnw` trong workflow như một lớp bảo vệ dự phòng.
+
+---
+
 ## 🛠️ Tips & Debugging Thường Gặp
 
 ### Lỗi: `Web server failed to start. Port 8080 was already in use.`

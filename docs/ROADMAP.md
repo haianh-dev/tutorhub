@@ -97,4 +97,5 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 | 2026-09-30 | T0.3 | DONE | `docker compose up -d db` → healthy; `mvn spring-boot:run -Dspring-boot.run.profiles=dev` → Started; `/actuator/health` = UP; Flyway V1 validated | docker-compose.yml, application-dev.yml, .env |
 | 2026-09-30 | T0.4 | DONE | `npm run build` thành công (tsc -b && vite build); `npm run lint` 0 warning 0 error; preview HTTP 200 | Vite + React + TS + Tailwind v4 + React Router + TanStack Query |
 | 2026-09-30 | T0.5 | DONE | `mvn test -Dtest=GlobalExceptionHandlerTest` → Tests run: 6, Failures: 0, Errors: 0 (BUILD SUCCESS) | GlobalExceptionHandler + AppException + ErrorCode + ResourceNotFoundException + DuplicateResourceException; test 400/404/409/422/500 |
+| 2026-10-01 | T0.6 | DONE | Tạo `.github/workflows/ci.yml` (backend `./mvnw clean verify`, frontend `npm ci && npm run lint && npm run build`); file mode `backend/mvnw` 100755 | Hoàn thành CI pipeline cho Phase 0 |
 

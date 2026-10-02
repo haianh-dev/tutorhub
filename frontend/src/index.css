@@ -1,13 +1,84 @@
 @import "tailwindcss";
 
-:root {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+@theme {
+  /* Colors */
+  --color-cream: #FFFBF0;
+  --color-paper: #FFFFFF;
+  --color-ink: #000000;
+  --color-yellow: #FFEB3B;
+  --color-coral: #FF5252;
+  --color-blue: #2196F3;
+
+  /* Fonts */
+  --font-heading: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Space Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Hard shadows: KHÔNG blur */
+  --shadow-hard-sm: 2px 2px 0 var(--color-ink);
+  --shadow-hard: 4px 4px 0 var(--color-ink);
+  --shadow-hard-lg: 8px 8px 0 var(--color-ink);
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background-color: #f8fafc;
-  color: #0f172a;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  html {
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+  }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    line-height: 1.2;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+  .on-dark :focus-visible {
+    outline-color: var(--color-paper);
+  }
+}
+
+/* Thành phần tương tác nổi: viền + bóng cứng + hover dịch chuyển */
+@utility brut-pop {
+  border: 3px solid var(--color-ink);
+  box-shadow: var(--shadow-hard);
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+  cursor: pointer;
+  @media (hover: hover) {
+    &:hover:not(:disabled):not([aria-disabled="true"]) {
+      transform: translate(-4px, -4px);
+      box-shadow: var(--shadow-hard-lg);
+    }
+  }
+  &:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: translate(2px, 2px);
+    box-shadow: var(--shadow-hard-sm);
+  }
+  &:disabled, &[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.5;
+    box-shadow: none;
+  }
+}
+
+/* Khối tĩnh (không hover): card, bảng, panel */
+@utility brut-box {
+  border: 3px solid var(--color-ink);
+  box-shadow: var(--shadow-hard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brut-pop {
+    transition: none;
+  }
+  .brut-pop:hover, .brut-pop:active {
+    transform: none;
+  }
 }

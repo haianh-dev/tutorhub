@@ -3,6 +3,8 @@ import AppLayout from '../components/layout/AppLayout';
 import DashboardPage from '../features/dashboard/DashboardPage';
 import PlaceholderPage from '../components/PlaceholderPage';
 
+import DevUiPage from '../features/dev/DevUiPage';
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -11,6 +13,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <DashboardPage />,
+      },
+      {
+        path: 'dev/ui',
+        element: <DevUiPage />,
       },
       {
         path: 'classes',
@@ -75,9 +81,9 @@ export const router = createBrowserRouter([
       {
         path: '*',
         element: (
-          <div className="text-center py-16">
-            <h1 className="text-4xl font-bold text-slate-800">404</h1>
-            <p className="text-slate-500 mt-2">Trang bạn tìm kiếm không tồn tại.</p>
+          <div className="text-center py-16 flex flex-col items-center gap-3">
+            <h1 className="text-6xl font-heading font-black text-ink">404</h1>
+            <p className="font-body text-ink/80 text-sm">Trang bạn tìm kiếm không tồn tại.</p>
           </div>
         ),
       },

@@ -10,8 +10,7 @@ import {
   Menu,
   X,
   GraduationCap,
-  Bell,
-  User as UserIcon,
+  LogOut,
 } from 'lucide-react';
 
 const navigation = [
@@ -28,88 +27,120 @@ export const AppLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
+  // Find page title according to current route
+  const currentNav = navigation.find((item) => item.href === location.pathname);
+  const pageTitle = currentNav ? currentNav.name : 'TutorHub';
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <Link to="/" className="flex items-center gap-2.5 group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-100 group-hover:scale-105 transition-transform">
-                  <GraduationCap className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                    TutorHub
-                  </span>
-                  <span className="hidden sm:inline-block ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-                    Gia sư &amp; Lớp học
-                  </span>
-                </div>
-              </Link>
-            </div>
+    <div className="min-h-screen bg-cream text-ink flex flex-col lg:flex-row font-body">
+      {/* Desktop Sidebar (lg >= 1024px) */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 bg-ink text-paper border-r-4 border-ink min-h-screen">
+        {/* Brand Header in Sidebar */}
+        <div className="h-16 px-6 border-b-4 border-paper/20 flex items-center gap-3 bg-ink select-none">
+          <div className="w-9 h-9 border-3 border-ink bg-yellow text-ink flex items-center justify-center font-heading font-black text-lg">
+            T
+          </div>
+          <div>
+            <span className="font-heading font-black text-lg tracking-wider uppercase text-paper block">
+              TutorHub
+            </span>
+            <span className="font-heading text-[10px] uppercase font-bold tracking-widest text-paper/70 block">
+              Quản lý gia sư
+            </span>
+          </div>
+        </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center space-x-1">
-              {navigation.map((item) => {
-                const isActive = location.pathname === item.href;
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-indigo-50 text-indigo-700 font-semibold'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {/* Actions & Profile */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                title="Thông báo"
+        {/* Sidebar Nav Links */}
+        <nav className="flex-1 p-4 flex flex-col gap-2">
+          {navigation.map((item) => {
+            const isActive = location.pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`flex items-center gap-3 px-4 py-3 font-heading text-xs font-bold uppercase transition-colors border-3 ${
+                  isActive
+                    ? 'bg-yellow text-ink border-ink brut-box'
+                    : 'bg-ink text-paper border-transparent hover:bg-paper hover:text-ink hover:border-paper'
+                }`}
               >
-                <Bell className="w-5 h-5" />
-              </button>
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
 
-              <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
-                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
-                  <UserIcon className="w-5 h-5" />
-                </div>
-                <div className="hidden md:block text-left text-xs">
-                  <div className="font-semibold text-slate-800">Gia sư Demo</div>
-                  <div className="text-slate-500">TUTOR</div>
-                </div>
+        {/* User Info & Role at Bottom of Sidebar */}
+        <div className="p-4 border-t-4 border-paper/20 bg-ink">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 border-3 border-paper bg-yellow text-ink font-heading font-bold text-base flex items-center justify-center select-none shrink-0">
+              G
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-heading font-bold text-xs uppercase text-paper truncate">
+                Gia sư Demo
               </div>
-
-              {/* Mobile menu button */}
-              <div className="lg:hidden flex items-center">
-                <button
-                  type="button"
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                >
-                  {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                </button>
+              <div className="font-body text-[11px] text-paper/70 font-semibold uppercase">
+                TUTOR
               </div>
             </div>
           </div>
         </div>
+      </aside>
+
+      {/* Main Column */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header */}
+        <header className="h-16 bg-cream border-b-4 border-ink sticky top-0 z-30 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* Mobile Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden w-11 h-11 border-3 border-ink bg-paper flex items-center justify-center text-ink cursor-pointer focus-visible:outline-3 focus-visible:outline-ink focus-visible:outline-offset-2"
+              aria-label={mobileMenuOpen ? 'Đóng menu' : 'Mở menu'}
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+
+            {/* Current Page Title */}
+            <h1 className="font-heading font-black text-lg sm:text-xl uppercase tracking-wide text-ink">
+              {pageTitle}
+            </h1>
+          </div>
+
+          {/* Right Header: Profile badge and Logout */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 border-3 border-ink bg-yellow text-ink font-heading font-bold text-base flex items-center justify-center select-none">
+                G
+              </div>
+              <div className="hidden sm:block text-left">
+                <div className="font-heading font-bold text-xs uppercase text-ink">
+                  Gia sư Demo
+                </div>
+                <div className="font-body text-[10px] text-ink/75 font-semibold">
+                  TUTOR
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="w-10 h-10 border-3 border-ink bg-paper flex items-center justify-center text-ink hover:bg-coral cursor-pointer transition-colors"
+              title="Đăng xuất"
+              aria-label="Đăng xuất"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </header>
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-b border-slate-200 bg-white px-4 pt-2 pb-4 space-y-1">
+          <div className="lg:hidden border-b-4 border-ink bg-paper px-4 py-4 space-y-2">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
               const Icon = item.icon;
@@ -118,32 +149,30 @@ export const AppLayout: React.FC = () => {
                   key={item.name}
                   to={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                  className={`flex items-center gap-3 px-4 py-3 font-heading text-xs font-bold uppercase border-3 ${
                     isActive
-                      ? 'bg-indigo-50 text-indigo-700 font-semibold'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      ? 'bg-yellow text-ink border-ink brut-box'
+                      : 'bg-paper text-ink border-ink hover:bg-cream'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  {item.name}
+                  <Icon className="w-5 h-5 shrink-0" />
+                  <span>{item.name}</span>
                 </Link>
               );
             })}
           </div>
         )}
-      </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Outlet />
-      </main>
+        {/* Main Workspace Content Area */}
+        <main className="flex-1 w-full max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-12 py-8">
+          <Outlet />
+        </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-xs text-slate-500">
-          TutorHub — Hệ thống quản lý lịch và lớp học cho gia sư (Mục tiêu: Quản lý &amp; Giảng dạy hiệu quả)
-        </div>
-      </footer>
+        {/* App Footer */}
+        <footer className="border-t-4 border-ink bg-paper py-4 px-4 sm:px-6 text-center text-xs font-body font-bold uppercase text-ink">
+          TutorHub — Hệ thống quản lý lịch và lớp học cho gia sư
+        </footer>
+      </div>
     </div>
   );
 };

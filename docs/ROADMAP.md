@@ -10,6 +10,7 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 | T0.2 | Backend Spring Boot skeleton (Web, Security, JPA, Validation, Flyway, Actuator, springdoc) | T0.1 | `mvn verify` xanh; `/actuator/health` = UP |
 | T0.3 | `docker-compose.yml` với PostgreSQL; profile dev kết nối được | T0.2 | `docker compose up` → backend chạy, Flyway chạy V1 rỗng |
 | T0.4 | Frontend skeleton Vite + React + TS + Tailwind, router, layout | T0.1 | `npm run build` xanh; trang trống hiển thị |
+| T0.4.1 | Định hướng giao diện Neubrutalism (Tokens, UI components, AppLayout, trang /dev/ui) | T0.4 | `npm run lint` & `npm run build` xanh; grep loại bỏ `rounded` và soft `shadow`; 6 màu token |
 | T0.5 | Exception handler thống nhất (ProblemDetail) + test | T0.2 | Test 400/404/409 trả đúng định dạng |
 | T0.6 | CI GitHub Actions: build+test backend và frontend | T0.2, T0.4 | Pipeline xanh trên main |
 
@@ -99,4 +100,5 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 | 2026-09-30 | T0.5 | DONE | `mvn test -Dtest=GlobalExceptionHandlerTest` → Tests run: 6, Failures: 0, Errors: 0 (BUILD SUCCESS) | GlobalExceptionHandler + AppException + ErrorCode + ResourceNotFoundException + DuplicateResourceException; test 400/404/409/422/500 |
 | 2026-10-01 | T0.6 | DONE | Tạo `.github/workflows/ci.yml` (backend `./mvnw clean verify`, frontend `npm ci && npm run lint && npm run build`); file mode `backend/mvnw` 100755 | Hoàn thành CI pipeline cho Phase 0 |
 | 2026-10-01 | T1.1 | DONE | Migration V2 chạy sạch trên PostgreSQL; UserRepositoryTest 4/4 passed; RefreshTokenRepositoryTest 4/4 passed (Total 14 tests passed) | Entity User, RefreshToken, Role, UserStatus; UserRepository, RefreshTokenRepository; V2__create_users_and_refresh_tokens.sql |
+| 2026-10-02 | T0.4.1 | DONE | `npm run lint` (0 error, 0 warning); `npm run build` (tsc -b && vite build); grep `rounded`/`shadow` = 0; hex check sạch | Thiết lập Design Tokens Tailwind v4 @theme, components/ui, AppLayout Neubrutalism, trang /dev/ui |
 

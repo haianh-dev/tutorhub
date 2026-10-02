@@ -131,6 +131,40 @@
 
 ---
 
+## Task: T0.4.1 - Định hướng giao diện (UI Foundation Neubrutalism)
+
+**Concepts:**
+- **Phong cách Neubrutalism trong ứng dụng quản lý:**
+  - Kết hợp sự táo bạo của phong cách Brutalism (khối hộp sắc cạnh, góc vuông `border-radius: 0`, viền đen dày `3px/4px border-ink`, bóng đổ cứng không làm mờ `box-shadow: 4px 4px 0 #000`) với màu sắc Pop-Art có kiểm soát.
+  - Khác biệt với landing page hào nhoáng: Trong ứng dụng quản trị (Dashboard, Lịch, Form, Bảng điểm), ưu tiên tính công thái học (ergonomics), độ tương phản cao, thao tác nhanh và cấu trúc lưới cố định, không dùng các chi tiết thừa thãi như marquee trôi chữ hay hiệu ứng kéo thả hoạt họa gây xao nhãng.
+- **Design Tokens & Theme trong Tailwind CSS v4:**
+  - Tailwind v4 sử dụng `@theme` block trực tiếp trong `index.css` để định nghĩa custom token: biến màu (`--color-cream`, `--color-paper`, `--color-ink`, `--color-yellow`, `--color-coral`, `--color-blue`), fonts (`--font-heading`, `--font-body`), và shadows cứng (`--shadow-hard-*`).
+  - Sử dụng `@utility` để tạo các class tái sử dụng chuẩn hóa: `brut-pop` (dành cho phần tử tương tác có hover/active offset và bóng dịch chuyển) và `brut-box` (dành cho khối tĩnh như Card, Container).
+- **Typography & Font Tiếng Việt:**
+  - Heading: **Space Grotesk** (độ đậm 700 - 900, `line-height >= 1.15` để không cắt dấu tiếng Việt).
+  - Body: **Space Mono** (chữ đơn cách monospace mang phong thái kỹ thuật, rõ ràng, hỗ trợ đầy đủ ký tự tiếng Việt có dấu như `Ệ ẳ ữ ặ Đ ơ ư`).
+  - Hỗ trợ `font-variant-numeric: tabular-nums` cho các bảng số liệu, điểm số và giờ học.
+- **Accessible Interactions & Micro-states:**
+  - Vùng chạm (touch target) tối thiểu 44×44px cho mọi button/input.
+  - Vòng viền bàn phím (`:focus-visible`) với `outline: 3px solid var(--color-ink); outline-offset: 3px;` giúp người dùng điều hướng bàn phím trực quan.
+  - Trạng thái `prefers-reduced-motion` tự động vô hiệu hóa chuyển động `translate` khi hover.
+
+**Architecture & Components:**
+- Xây dựng thư viện component nền tảng tại `src/components/ui/`:
+  - `Button`: Hỗ trợ 4 biến thể ngữ nghĩa (`primary`, `secondary`, `info`, `danger`), trạng thái loading/disabled, font heading in hoa.
+  - `Card`: Khối chứa nội dung tĩnh với viền 3px, nền `paper` và padding 24px theo hệ lưới 8px.
+  - `Badge`: Nhãn trạng thái nhỏ viền 2px, in hoa, màu theo quy ước ngữ nghĩa trạng thái.
+  - `Alert`: Khối thông báo/cảnh báo nổi bật với khối ký hiệu 40×40 riêng biệt (`!`, `✕`, `i`).
+  - `Input`: Ô nhập liệu chuẩn với nhãn in hoa bên trên, viền 3px và khối thông báo lỗi chuyên biệt màu `coral`.
+  - `Tabs`: Bộ chuyển tab dạng segmented button với tab đang kích hoạt mang màu nhấn `yellow`.
+  - `StatTileGroup`: Dải hiển thị chỉ số lớn với font số hiển thị 900 và nhãn ngắn gọn.
+  - `EmptyState`: Khung viền đứt nét 3px cho các màn chưa có dữ liệu.
+- Chuyển đổi khung `AppLayout` sang phong cách Neubrutalism chuẩn:
+  - Desktop: Sidebar cố định 256px màu `ink`, chữ `paper`, viền phải 4px `ink`.
+  - Mobile: Header dính cố định viền 4px kèm ngăn menu drawer trượt xuống khi bấm hamburger button.
+
+---
+
 ## 🛠️ Tips & Debugging Thường Gặp
 
 ### Lỗi: `Web server failed to start. Port 8080 was already in use.`

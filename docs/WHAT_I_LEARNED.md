@@ -165,6 +165,35 @@
 
 ---
 
+## Task: T1.2 - Đăng ký gia sư + Đăng nhập + JWT + BCrypt
+
+**Concepts:**
+- **Mã hóa mật khẩu bằng BCrypt (`PasswordEncoder`):**
+  - BCrypt là thuật toán one-way hashing tích hợp salt ngẫu nhiên và cost factor (mặc định 10 vòng mã hóa).
+  - Không bao giờ lưu mật khẩu dạng plain-text hoặc MD5/SHA-1; kết quả băm luôn bắt đầu bằng `$2a$` hoặc `$2b$`.
+  - Kiểm tra mật khẩu bằng `passwordEncoder.matches(rawPassword, encodedPassword)` thay vì tự so sánh chuỗi băm.
+- **Xác thực JWT (JSON Web Token) với JJWT 0.12.x:**
+  - Token stateless: Access token chứa các claims định danh (`sub` = userId, `email`, `role`, `iat`, `exp`), được ký điện tử bằng HMAC-SHA256 với Secret Key 256-bit.
+  - Server không cần truy vấn DB để xác thực danh tính từng request sau khi đã đăng nhập (stateless session).
+- **Cơ chế Hashing Refresh Token an toàn:**
+  - Refresh token là chuỗi ngẫu nhiên có thời hạn dài (7 ngày).
+  - Để ngăn ngừa rủi ro rò rỉ cơ sở dữ liệu, **chỉ lưu chuỗi băm SHA-256** của refresh token vào bảng `refresh_tokens`. Khi client gửi refresh token lên để cấp lại access token, backend băm chuỗi đó và tìm bản ghi tương ứng (`findByTokenHash`).
+- **Bảo mật phản hồi lỗi đăng nhập (OWASP Best Practice):**
+  - Khi đăng nhập thất bại (dù email không tồn tại hay sai mật khẩu), luôn trả về mã lỗi chung `AUTH_INVALID_CREDENTIALS` (HTTP 401) kèm thông báo "Email hoặc mật khẩu không chính xác" để ngăn ngừa kỹ thuật tấn công dò quét người dùng (User Enumeration Attack).
+
+**Architecture & Config:**
+- **Spring Security 6 stateless filter chain:**
+  - Cấu hình `SecurityFilterChain` vô hiệu hóa CSRF (`AbstractHttpConfigurer::disable`) vì API sử dụng token JWT không dùng session cookie, tránh rủi ro CSRF.
+  - Đặt `SessionCreationPolicy.STATELESS` để Spring Security không tạo `HttpSession`.
+  - Mở quyền truy cập `permitAll()` cho các endpoint xác thực công khai `/api/v1/auth/**`, Actuator `/actuator/**` và tài liệu Swagger OpenAPI `/v3/api-docs/**`.
+- **Cấu trúc DTO bằng Java `record`:**
+  - `RegisterTutorRequest`: Kiểm tra tính hợp lệ dữ liệu bằng Bean Validation (`@Email`, `@NotBlank`, `@Size(min=8)`).
+  - `LoginRequest`: Đóng gói thông tin đăng nhập.
+  - `UserResponse`: Trả về dữ liệu người dùng sạch, không bao gồm `passwordHash`.
+  - `AuthResponse`: Đóng gói `accessToken`, `refreshToken` và `UserResponse`.
+
+---
+
 ## 🛠️ Tips & Debugging Thường Gặp
 
 ### Lỗi: `Web server failed to start. Port 8080 was already in use.`

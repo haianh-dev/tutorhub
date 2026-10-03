@@ -17,9 +17,14 @@ Test DB dùng PostgreSQL thật qua Testcontainers (không dùng H2, vì cần `
 ### Auth
 - Đăng ký hợp lệ → 201; email trùng → 409; mật khẩu < 8 → 400; email sai định dạng → 400.
 - Login đúng/sai → 200/401; thông báo lỗi không tiết lộ email tồn tại.
+- Refresh hợp lệ → rotate access/refresh token; refresh token cũ không dùng lại được; hai request đồng thời cùng refresh token chỉ đúng một request thành công.
+- Logout cần bearer token và chỉ thu hồi refresh token thuộc user hiện tại; logout token của user khác → 403.
+- Đổi mật khẩu yêu cầu current password đúng; mật khẩu mới < 8 ký tự → 400; thành công thì mọi refresh token bị thu hồi.
 - Token hết hạn → 401; refresh token bị thu hồi → không dùng lại được.
 - Lời mời: hợp lệ; hết hạn; đã dùng; PARENT mời cho học sinh không thuộc lớp của gia sư → 403/422.
-- Đặt lại mật khẩu: link hợp lệ → 200 (đổi được mật khẩu mới); link hết hạn / đã dùng → 400/410.
+- Đặt lại mật khẩu: link hợp lệ → 200, mật khẩu được BCrypt và refresh token bị thu hồi; link hết hạn/đã dùng → 410; hai request đồng thời cùng reset token chỉ một thành công.
+- TUTOR tạo link cho học sinh đang học trong lớp ACTIVE của mình và PARENT đã liên kết với học sinh đó; user ngoài quyền → 404; STUDENT/PARENT gọi API tạo link → 403; ADMIN tạo link cho mọi role.
+- Reset token raw không lưu DB; chỉ lưu SHA-256 hash; response/log không chứa password hoặc password hash.
 - Mật khẩu không xuất hiện trong response và log.
 
 ### Phân quyền (chạy cho MỌI nhóm endpoint)

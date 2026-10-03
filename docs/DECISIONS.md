@@ -40,6 +40,7 @@ AI chỉ được coi `CONFIRMED` là ràng buộc. `PROPOSED` phải hỏi lạ
 | D-33 | PROPOSED | Font body dùng Space Mono thay DM Mono của prompt gốc; có thể đổi sang Be Vietnam Pro nếu đọc đoạn dài mỏi mắt | Đảm bảo hiển thị đúng dấu tiếng Việt |
 | D-34 | PROPOSED | Viền 2px cho đường kẻ bên trong bảng/danh sách dày; khối nổi giữ 3px, vùng lớn 4px | Giữ tính dễ đọc của bảng điểm danh/điểm số |
 | D-35 | CONFIRMED | Backend dùng Java 25 LTS | Người dùng yêu cầu nâng runtime lên phiên bản LTS mới nhất (2026-10-03); supersedes riêng mục Java 21 trong D-07, Spring Boot/Maven không đổi |
+| D-36 | CONFIRMED | Đưa schema ownership tối thiểu `classes`, `class_enrollments`, `parent_students` lên V4 để T1.3 thực thi D-29; T2.1/T2.2 tiếp tục mở rộng nghiệp vụ trên schema này | Người dùng duyệt 2026-10-03 để TUTOR chỉ tạo reset link cho học sinh đang ghi danh trong lớp mình và phụ huynh của các em; không nới quyền ownership |
 
 ## Câu hỏi còn mở
 Toàn bộ các câu hỏi mở ban đầu đã được người dùng chốt đầy đủ tại `PROJECT_BRIEF.md §9` (ngày 2026-09-30). Mọi phát sinh mới trong quá trình triển khai phải tuân thủ quy trình hỏi người dùng trước khi quyết định.

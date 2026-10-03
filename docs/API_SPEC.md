@@ -11,19 +11,19 @@ Mã lỗi chung: 400 validation · 401 chưa đăng nhập · 403 sai vai trò �
 |---|---|---|---|
 | POST | `/auth/register-tutor` | public | `{email, password, fullName, phone?}` → 201 `{user}` |
 | POST | `/auth/login` | public | `{email, password}` → 200 `{accessToken, refreshToken, user}` |
-| POST | `/auth/refresh` | public | `{refreshToken}` → 200 `{accessToken, refreshToken}` |
-| POST | `/auth/logout` | any | thu hồi refresh token |
+| POST | `/auth/refresh` | public | `{refreshToken}` → 200 `{accessToken, refreshToken}`; rotate token cũ, token cũ không dùng lại được |
+| POST | `/auth/logout` | any | `{refreshToken}` → 204; chỉ thu hồi token thuộc user hiện tại |
 | POST | `/auth/accept-invitation` | public | `{token, password, fullName, phone?}` → 201, tự đăng nhập |
 | GET | `/auth/invitations/{token}` | public | kiểm tra lời mời còn hiệu lực → `{role, email, className?}` |
-| POST | `/auth/reset-password` | public | `{token, newPassword}` → 200, đặt lại mật khẩu từ link |
+| POST | `/auth/reset-password` | public | `{token, newPassword}` → 200; token dùng một lần, hết hạn/đã dùng → 410; thu hồi mọi refresh token của user |
 | GET | `/me` | any | thông tin người dùng hiện tại |
-| PUT | `/me/password` | any | `{currentPassword, newPassword}` |
+| PUT | `/me/password` | any | `{currentPassword, newPassword}` → 204; mật khẩu hiện tại sai → 401; thu hồi mọi refresh token |
 
 ## 2. Lời mời và liên kết
 | Method | Path | Role | Mô tả |
 |---|---|---|---|
 | POST | `/invitations` | TUTOR | `{role: STUDENT|PARENT, email?, classId? , studentId?}` → `{link, expiresAt}`. PARENT bắt buộc `studentId` là học sinh trong lớp của gia sư |
-| POST | `/users/{id}/password-reset-link` | TUTOR/ADMIN | tạo link đặt lại mật khẩu cho học sinh/phụ huynh (TUTOR: chỉ tạo cho học sinh/phụ huynh trong lớp của mình; ADMIN: cho mọi user) → `{link, expiresAt}` |
+| POST | `/users/{id}/password-reset-link` | TUTOR/ADMIN | tạo link đặt lại mật khẩu (TUTOR: chỉ STUDENT trong lớp đang dạy hoặc PARENT đã liên kết với học sinh trong lớp đó; ADMIN: mọi user) → 200 `{link, expiresAt}`; TTL mặc định 30 phút, token chỉ lưu hash, link gửi thủ công qua Zalo/tin nhắn |
 
 ## 3. Classes & Enrollments
 | Method | Path | Role | Mô tả |

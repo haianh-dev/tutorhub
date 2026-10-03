@@ -28,6 +28,9 @@
 - Phân lớp: `controller` (HTTP, DTO) → `service` (nghiệp vụ, transaction, kiểm tra quyền sở hữu) → `repository` (truy cập dữ liệu). Entity không trả trực tiếp ra API, luôn qua DTO (record).
 - Quy tắc quyền sở hữu nằm ở **service** (ví dụ `ClassAccessPolicy`), không rải trong controller.
 - **Vai trò ADMIN:** Được seed tự động khi deploy (từ biến môi trường `ADMIN_EMAIL`, `ADMIN_DEFAULT_PASSWORD`). ADMIN có toàn quyền (bỏ qua ownership filter), xem/quản lý mọi lớp học, tạo link reset mật khẩu cho bất kỳ user nào, và khi tạo lớp học có quyền chỉ định `tutor_id` (gia sư phụ trách).
+- JWT filter xác minh chữ ký/expiry rồi nạp user ACTIVE từ DB; role lấy từ DB, không tin role gửi từ client. Refresh/reset token đều lưu SHA-256 hash và dùng pessimistic lock theo thứ tự user → token để chặn replay đồng thời.
+- Đổi/đặt lại mật khẩu thu hồi toàn bộ refresh token. Access JWT hiện có là stateless nên còn hiệu lực tối đa đến khi hết TTL 15 phút.
+- TUTOR chỉ tạo reset link cho học sinh đang ghi danh trong lớp ACTIVE của mình hoặc phụ huynh đã liên kết với học sinh đó; kiểm tra ownership ở service. ADMIN được bypass ownership theo D-27.
 
 ## 3. Cấu trúc repo
 ```
@@ -72,6 +75,8 @@ tutorhub/
 
 Quy ước: khóa chính `BIGINT GENERATED ALWAYS AS IDENTITY`; thời gian `timestamptz` (UTC); `created_at`, `updated_at` ở mọi bảng; tên bảng số nhiều, snake_case.
 
+V3 tạo `password_reset_tokens`. V4 đưa trước các bảng ownership tối thiểu (`classes`, `class_enrollments`, `parent_students`) để hoàn thành kiểm tra quyền của T1.3; T2.1/T2.2 sẽ bổ sung nghiệp vụ/API lớp học trên các bảng này.
+
 ```sql
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
@@ -91,7 +96,9 @@ password_reset_tokens(                             -- link đặt lại mật kh
   id, user_id BIGINT NOT NULL REFERENCES users, token_hash UNIQUE NOT NULL,
   expires_at NOT NULL, used_at NULL, created_at)
 
-parent_students(parent_id REFERENCES users, student_id REFERENCES users, PRIMARY KEY(parent_id, student_id))
+parent_students(
+  parent_id REFERENCES users, student_id REFERENCES users, created_at,
+  PRIMARY KEY(parent_id, student_id), CHECK (parent_id <> student_id))
 
 classes(
   id, tutor_id NOT NULL REFERENCES users, name NOT NULL, subject NOT NULL, description,
@@ -100,7 +107,7 @@ classes(
 
 class_enrollments(
   id, class_id REFERENCES classes, student_id REFERENCES users,
-  status CHECK (status IN ('ACTIVE','LEFT')), enrolled_at,
+  status CHECK (status IN ('ACTIVE','LEFT')), enrolled_at, left_at, created_at,
   UNIQUE (class_id, student_id))
 
 schedule_rules(

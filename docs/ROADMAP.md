@@ -102,5 +102,7 @@ Mỗi task: làm nhỏ, kiểm chứng độc lập, một commit/PR. Thứ tự
 | 2026-10-01 | T1.1 | DONE | Migration V2 chạy sạch trên PostgreSQL; UserRepositoryTest 4/4 passed; RefreshTokenRepositoryTest 4/4 passed (Total 14 tests passed) | Entity User, RefreshToken, Role, UserStatus; UserRepository, RefreshTokenRepository; V2__create_users_and_refresh_tokens.sql |
 | 2026-10-02 | T0.4.1 | DONE | `npm run lint` (0 error, 0 warning); `npm run build` (tsc -b && vite build); grep `rounded`/`shadow` = 0; hex check sạch | Thiết lập Design Tokens Tailwind v4 @theme, components/ui, AppLayout Neubrutalism, trang /dev/ui |
 | 2026-10-02 | T1.2 | DONE | `mvn test` → Tests run: 28, Failures: 0, Errors: 0, Skipped: 0 (BUILD SUCCESS) | Đăng ký gia sư + Đăng nhập + JWT + BCrypt + RefreshToken SHA-256 hash; AuthServiceTest (6/6 passed), AuthIntegrationTest (7/7 passed) |
+| 2026-10-03 | T1.3 | DONE | JDK 25: `mvnw.cmd clean verify -q` trên PostgreSQL biệt lập → 40/40 backend tests passed (12/12 T1.3); V3/V4 migrate sạch | Refresh rotation/logout/đổi mật khẩu/reset link; token hash + single-use/expiry/concurrency; TUTOR ownership theo enrollment + PARENT liên kết; ADMIN bypass; ownership schema V4 được đưa trước T2.1/T2.2 theo D-36 |
+| 2026-10-03 | Java runtime upgrade | DONE | JDK 25.0.2: `mvnw.cmd clean test-compile -q`, `mvnw.cmd clean test -q`, `mvnw.cmd clean verify -Djacoco.skip=false -q` → 28/28 tests passed | Java 25 LTS; Spring Boot 3.5.16, Lombok 1.18.48, PostgreSQL JDBC 42.7.12; direct dependency CVE rescan sạch; JaCoCo chưa cấu hình |
 
 

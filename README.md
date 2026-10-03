@@ -20,7 +20,7 @@
 
 ## 2. Công nghệ sử dụng (Tech Stack)
 
-* **Backend:** Java 21, Spring Boot 3.x (Spring Web, Spring Security + JWT, Spring Data JPA, Flyway, Testcontainers).
+* **Backend:** Java 25 LTS, Spring Boot 3.x (Spring Web, Spring Security + JWT, Spring Data JPA, Flyway, Testcontainers).
 * **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, TanStack Query, React Hook Form + Zod, Axios.
 * **Database:** PostgreSQL 16 (chạy Docker, sử dụng `btree_gist` để xử lý exclusion constraint chống trùng lịch).
 * **Kiến trúc:** Monolith module hóa theo tính năng (Feature-based packaging).
@@ -57,7 +57,7 @@ tutorhub/
 ## 4. Hướng dẫn khởi chạy cục bộ (Local Development)
 
 ### Yêu cầu môi trường
-* Java 21 LTS trở lên
+* Java 25 LTS
 * Node.js v20+ & npm
 * Docker & Docker Compose (cho PostgreSQL và Testcontainers)
 

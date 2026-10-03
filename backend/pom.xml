@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.4.0</version>
+		<version>3.5.16</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.tutorhub</groupId>
@@ -14,7 +14,9 @@
 	<name>TutorHub</name>
 	<description>TutorHub Backend</description>
 	<properties>
-		<java.version>21</java.version>
+		<java.version>25</java.version>
+		<lombok.version>1.18.48</lombok.version>
+		<postgresql.version>42.7.12</postgresql.version>
 		<springdoc.version>2.6.0</springdoc.version>
 		<jjwt.version>0.12.6</jjwt.version>
 	</properties>

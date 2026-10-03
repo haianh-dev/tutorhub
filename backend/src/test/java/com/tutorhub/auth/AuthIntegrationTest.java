@@ -18,6 +18,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -44,6 +45,9 @@ class AuthIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
     @Autowired
@@ -54,7 +58,11 @@ class AuthIntegrationTest {
 
     @BeforeEach
     void cleanUp() {
+        jdbcTemplate.update("DELETE FROM password_reset_tokens");
         refreshTokenRepository.deleteAll();
+        jdbcTemplate.update("DELETE FROM parent_students");
+        jdbcTemplate.update("DELETE FROM class_enrollments");
+        jdbcTemplate.update("DELETE FROM classes");
         userRepository.deleteAll();
     }
 

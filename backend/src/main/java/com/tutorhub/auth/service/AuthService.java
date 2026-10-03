@@ -1,8 +1,11 @@
 package com.tutorhub.auth.service;
 
 import com.tutorhub.auth.dto.AuthResponse;
+import com.tutorhub.auth.dto.ChangePasswordRequest;
 import com.tutorhub.auth.dto.LoginRequest;
 import com.tutorhub.auth.dto.RegisterTutorRequest;
+import com.tutorhub.auth.dto.RefreshRequest;
+import com.tutorhub.auth.dto.TokenPairResponse;
 import com.tutorhub.auth.entity.RefreshToken;
 import com.tutorhub.auth.repository.RefreshTokenRepository;
 import com.tutorhub.common.exception.AppException;
@@ -83,20 +86,85 @@ public class AuthService {
         }
 
         String accessToken = jwtService.generateAccessToken(user);
-
-        // Sinh refresh token ngẫu nhiên an toàn và lưu băm vào DB
-        String rawRefreshToken = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
-        String tokenHash = hashToken(rawRefreshToken);
-
-        RefreshToken refreshToken = RefreshToken.builder()
-            .user(user)
-            .tokenHash(tokenHash)
-            .expiresAt(Instant.now().plusSeconds(refreshTokenTtlSeconds))
-            .build();
-
-        refreshTokenRepository.save(refreshToken);
+        String rawRefreshToken = createRefreshToken(user, Instant.now());
 
         return new AuthResponse(accessToken, rawRefreshToken, UserResponse.from(user));
+    }
+
+    @Transactional
+    public TokenPairResponse refresh(RefreshRequest request) {
+        String tokenHash = hashToken(request.refreshToken());
+        Long userId = refreshTokenRepository.findUserIdByTokenHash(tokenHash)
+            .orElseThrow(this::invalidRefreshToken);
+
+        User user = userRepository.findByIdForUpdate(userId)
+            .orElseThrow(this::invalidRefreshToken);
+        RefreshToken current = refreshTokenRepository.findByTokenHashForUpdate(tokenHash)
+            .orElseThrow(this::invalidRefreshToken);
+        if (!current.isValid()) {
+            throw invalidRefreshToken();
+        }
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new AppException(ErrorCode.AUTH_ACCESS_DENIED, "Tài khoản của bạn đã bị vô hiệu hóa");
+        }
+
+        current.setRevokedAt(Instant.now());
+        refreshTokenRepository.save(current);
+        Instant now = Instant.now();
+        return new TokenPairResponse(jwtService.generateAccessToken(user), createRefreshToken(user, now));
+    }
+
+    @Transactional
+    public void logout(Long authenticatedUserId, String rawRefreshToken) {
+        userRepository.findByIdForUpdate(authenticatedUserId)
+            .orElseThrow(() -> new AppException(ErrorCode.AUTH_ACCESS_DENIED, "Tài khoản không hợp lệ"));
+        RefreshToken token = refreshTokenRepository.findByTokenHashForUpdate(hashToken(rawRefreshToken))
+            .orElse(null);
+        if (token == null) {
+            return;
+        }
+        if (!token.getUser().getId().equals(authenticatedUserId)) {
+            throw new AppException(ErrorCode.AUTH_ACCESS_DENIED, "Refresh token không thuộc tài khoản hiện tại");
+        }
+        if (!token.isRevoked()) {
+            token.setRevokedAt(Instant.now());
+            refreshTokenRepository.save(token);
+        }
+    }
+
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = userRepository.findByIdForUpdate(userId)
+            .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy người dùng"));
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new AppException(ErrorCode.AUTH_INVALID_CREDENTIALS, "Mật khẩu hiện tại không chính xác");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        refreshTokenRepository.revokeActiveByUserId(userId, Instant.now());
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse getCurrentUser(Long userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy người dùng"));
+        return UserResponse.from(user);
+    }
+
+    private String createRefreshToken(User user, Instant now) {
+        String rawToken = UUID.randomUUID().toString().replace("-", "")
+            + UUID.randomUUID().toString().replace("-", "");
+        refreshTokenRepository.save(RefreshToken.builder()
+            .user(user)
+            .tokenHash(hashToken(rawToken))
+            .expiresAt(now.plusSeconds(refreshTokenTtlSeconds))
+            .build());
+        return rawToken;
+    }
+
+    private AppException invalidRefreshToken() {
+        return new AppException(ErrorCode.AUTH_TOKEN_INVALID, "Refresh token không hợp lệ hoặc đã hết hạn");
     }
 
     /**

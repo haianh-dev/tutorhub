@@ -59,4 +59,8 @@ app:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     access-token-ttl-seconds: ${JWT_ACCESS_TTL:900}
     refresh-token-ttl-seconds: ${JWT_REFRESH_TTL:604800}
+  auth:
+    password-reset-ttl-seconds: ${PASSWORD_RESET_TTL:1800}
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
 

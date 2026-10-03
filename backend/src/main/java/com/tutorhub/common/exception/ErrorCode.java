@@ -32,6 +32,7 @@ public enum ErrorCode {
     CYCLE_INVALID(422, "Tuition cycle operation invalid"),
     INVITATION_EXPIRED(410, "Invitation expired"),
     INVITATION_USED(410, "Invitation already used"),
+    PASSWORD_RESET_INVALID(410, "Password reset token expired or already used"),
 
     // ── Generic ──────────────────────────────────────────
     INTERNAL_ERROR(500, "Internal server error");

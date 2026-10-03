@@ -3,7 +3,7 @@
 ## 1. Công nghệ
 | Lớp | Lựa chọn | Trạng thái |
 |---|---|---|
-| Backend | Java 21, Spring Boot 3.x, Maven | Java+Spring Boot CONFIRMED; phiên bản ASSUMPTION |
+| Backend | Java 25 LTS, Spring Boot 3.x, Maven | Java 25 CONFIRMED; Spring Boot/Maven phiên bản ASSUMPTION |
 | Web/API | Spring Web (REST, JSON) | ASSUMPTION |
 | Bảo mật | Spring Security + JWT (access 15 phút, refresh 7 ngày), BCrypt | ASSUMPTION |
 | Dữ liệu | Spring Data JPA (Hibernate), PostgreSQL 16, Flyway | PostgreSQL CONFIRMED; còn lại ASSUMPTION |

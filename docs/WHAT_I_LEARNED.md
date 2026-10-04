@@ -250,3 +250,46 @@
      taskkill /PID <PID> /F
      ```
 
+---
+
+## Task: T1.4 — Lời mời Học sinh / Phụ huynh (Invitations)
+
+**Concepts:**
+- **Invitation Token: Single-use + SHA-256 Hash:**
+  - Giống với pattern reset password (T1.3), raw token được tạo bằng `SecureRandom` (32 bytes, Base64 URL-safe), **không bao giờ lưu raw token vào DB**. Chỉ lưu chuỗi băm **SHA-256** (`token_hash UNIQUE`). Khi người dùng gửi token qua link, backend băm lại và tra bảng `token_hash`.
+  - **Single-use**: Trường `used_at` ghi thời điểm sử dụng. Token đã dùng (`used_at IS NOT NULL`) hoặc hết hạn (`expires_at < now`) → 410 `INVITATION_USED` / `INVITATION_EXPIRED`.
+  - **Pessimistic lock** (`findByTokenHashForUpdate`) khi accept: ngăn hai request đồng thời cùng "chấp nhận" một invitation gây race condition.
+
+- **Luồng nghiệp vụ theo role:**
+  - `role=STUDENT`: tạo tài khoản STUDENT → nếu invitation có `class_id` → ghi danh vào lớp (`INSERT INTO class_enrollments ... ON CONFLICT DO UPDATE`).
+  - `role=PARENT`: tạo tài khoản PARENT + liên kết phụ huynh-học sinh (`INSERT INTO parent_students ... ON CONFLICT DO NOTHING`).
+  - Sau khi tạo tài khoản → **tự đăng nhập**: sinh access token + refresh token → trả về `AuthResponse` (không cần đăng nhập lại thủ công).
+
+- **Ownership Check cho TUTOR:**
+  - TUTOR chỉ được mời học sinh vào lớp **ACTIVE của chính họ** (`CHECK_TUTOR_OWNS_CLASS_SQL`).
+  - Khi mời PARENT, học sinh trong `studentId` phải đang học trong ít nhất một lớp ACTIVE của TUTOR đó (`CHECK_STUDENT_IN_TUTOR_CLASS_SQL`).
+  - Nếu không hợp lệ → 404 `RESOURCE_NOT_FOUND` (ẩn sự tồn tại, tránh information disclosure).
+  - ADMIN không bị giới hạn (không qua ownership check).
+
+- **Sử dụng `Long classId` thay vì `@ManyToOne` cho `classes`:**
+  - Entity `Class` chưa tồn tại ở T1.4 (sẽ tạo ở T2.1). Dùng `Long classId` (raw FK column) trong entity `Invitation` để tránh circular dependency và giữ phạm vi task. Khi T2.1 tạo `Class` entity, có thể nâng lên `@ManyToOne` nếu cần.
+
+**Architecture & Config:**
+- **V5 Migration** (`V5__create_invitations.sql`): Bảng `invitations` với `token_hash UNIQUE`, `role CHECK (IN 'STUDENT','PARENT')`, `class_id FK REFERENCES classes ON DELETE SET NULL`, `student_id FK REFERENCES users ON DELETE SET NULL`, `expires_at`, `used_at`.
+- **3 Endpoint mới:**
+  - `POST /api/v1/invitations` — yêu cầu xác thực TUTOR/ADMIN (`InvitationController`), trả về link đầy đủ + expiresAt.
+  - `GET /api/v1/auth/invitations/{token}` — public, xác minh token còn hợp lệ, trả role/email/className.
+  - `POST /api/v1/auth/accept-invitation` — public, tạo tài khoản + ghi danh/liên kết + tự đăng nhập.
+- **Security Config**: `/api/v1/auth/accept-invitation` và `/api/v1/auth/invitations/**` đã có trong `permitAll()` từ T1.3.
+- **Link building**: Dùng `UriComponentsBuilder` để xây dựng link `{frontendBaseUrl}/accept-invitation?token={rawToken}` — có thể cấu hình qua `app.frontend.base-url` trong `application.yml`.
+
+**Important decision & Debugging tips:**
+- **@DataJpaTest + Real PostgreSQL: Data Leak từ @SpringBootTest:**
+  - `@SpringBootTest` (dùng cho integration tests như `InvitationIntegrationTest`, `AuthIntegrationTest`) không rollback — mọi commit vào DB đều tồn tại sau khi test chạy xong.
+  - `@DataJpaTest` bọc mỗi test trong `@Transactional` rollback, **nhưng** dữ liệu đã commit từ `@SpringBootTest` trước đó vẫn còn trong DB và không bị cuốn vào transaction rollback của `@DataJpaTest`.
+  - **Giải pháp**: Thêm `@BeforeEach` vào `@DataJpaTest` test class, dùng `JdbcTemplate.update("DELETE FROM ...")` theo thứ tự FK đúng, sau đó `entityManager.flush(); entityManager.clear()` để xóa JPA first-level cache. **Không** dùng `userRepository.deleteAll()` vì JPA cache có thể không nhất quán với DB sau lệnh JDBC.
+  - **Thứ tự xóa FK quan trọng**: `invitations` → `password_reset_tokens` → `refresh_tokens` → `parent_students` → `class_enrollments` → `classes` → `users`. Sai thứ tự sẽ bị PostgreSQL FK constraint rejection.
+
+- **Tại sao không dùng email trong `AcceptInvitationRequest`:**
+  - `users.email` là `NOT NULL` theo schema. Email người nhận lời mời được lấy từ `invitation.email` (điền khi TUTOR tạo lời mời). Nếu gia sư không điền email khi tạo lời mời → báo lỗi validation khi accept (yêu cầu gia sư tạo lại có email). Thiết kế này phù hợp với quy trình: gia sư biết email người được mời khi soạn lời mời.
+

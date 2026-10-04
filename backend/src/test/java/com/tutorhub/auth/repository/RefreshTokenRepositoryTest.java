@@ -4,6 +4,7 @@ import com.tutorhub.auth.entity.RefreshToken;
 import com.tutorhub.user.entity.Role;
 import com.tutorhub.user.entity.User;
 import com.tutorhub.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -34,10 +36,27 @@ class RefreshTokenRepositoryTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
+
     private User sampleUser;
 
     @BeforeEach
     void setUp() {
+        // Cleanup dữ liệu đã commit từ @SpringBootTest integration tests chạy trước.
+        jdbcTemplate.update("DELETE FROM invitations");
+        jdbcTemplate.update("DELETE FROM password_reset_tokens");
+        jdbcTemplate.update("DELETE FROM refresh_tokens");
+        jdbcTemplate.update("DELETE FROM parent_students");
+        jdbcTemplate.update("DELETE FROM class_enrollments");
+        jdbcTemplate.update("DELETE FROM classes");
+        jdbcTemplate.update("DELETE FROM users");
+        entityManager.flush();
+        entityManager.clear();
+
         sampleUser = userRepository.save(User.builder()
                 .email("tokenuser@example.com")
                 .passwordHash("pwd")

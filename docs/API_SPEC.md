@@ -22,7 +22,9 @@ Mã lỗi chung: 400 validation · 401 chưa đăng nhập · 403 sai vai trò �
 ## 2. Lời mời và liên kết
 | Method | Path | Role | Mô tả |
 |---|---|---|---|
-| POST | `/invitations` | TUTOR | `{role: STUDENT|PARENT, email?, classId? , studentId?}` → `{link, expiresAt}`. PARENT bắt buộc `studentId` là học sinh trong lớp của gia sư |
+| POST | `/invitations` | TUTOR/ADMIN | `{role: STUDENT\|PARENT, email?, classId?, studentId?}` → 201 `{link, role, email?, className?, expiresAt}`; TTL 7 ngày; PARENT bắt buộc `studentId` (học sinh trong lớp của TUTOR); TUTOR chỉ mời trong lớp ACTIVE của mình; ADMIN không giới hạn |
+| GET | `/auth/invitations/{token}` | public | kiểm tra lời mời → `{role, email?, className?, expiresAt}`; hết hạn/đã dùng → 410 |
+| POST | `/auth/accept-invitation` | public | `{token, password, fullName, phone?}` → 201 `{accessToken, refreshToken, user}`; tạo tài khoản STUDENT/PARENT; STUDENT + classId → ghi danh; PARENT + studentId → liên kết parent_students; token dùng 1 lần |
 | POST | `/users/{id}/password-reset-link` | TUTOR/ADMIN | tạo link đặt lại mật khẩu (TUTOR: chỉ STUDENT trong lớp đang dạy hoặc PARENT đã liên kết với học sinh trong lớp đó; ADMIN: mọi user) → 200 `{link, expiresAt}`; TTL mặc định 30 phút, token chỉ lưu hash, link gửi thủ công qua Zalo/tin nhắn |
 
 ## 3. Classes & Enrollments

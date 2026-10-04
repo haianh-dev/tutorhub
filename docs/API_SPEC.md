@@ -30,9 +30,9 @@ Mã lỗi chung: 400 validation · 401 chưa đăng nhập · 403 sai vai trò �
 ## 3. Classes & Enrollments
 | Method | Path | Role | Mô tả |
 |---|---|---|---|
-| GET | `/classes?status=&q=` | TUTOR/STUDENT/PARENT/ADMIN | danh sách lớp theo quyền (PARENT: thêm `?studentId=`; ADMIN: xem tất cả lớp) |
+| GET | `/classes?status=&q=&studentId=` | TUTOR/STUDENT/PARENT/ADMIN | TUTOR: lớp mình; STUDENT: lớp có enrollment ACTIVE của chính mình (bỏ qua `studentId` client gửi); PARENT: lớp có enrollment ACTIVE của con trong `parent_students`, có thể thêm `?studentId=` để lọc một con; ADMIN: tất cả lớp |
 | POST | `/classes` | TUTOR/ADMIN | `{name, subject, classType: ONE_ON_ONE\|GROUP, description?, tutorId?}` → 201 (ADMIN bắt buộc truyền `tutorId`; TUTOR tự lấy từ token; cảnh báo nếu GROUP < 2 HS) |
-| GET | `/classes/{id}` | theo quyền | chi tiết + số học sinh |
+| GET | `/classes/{id}` | theo quyền | chi tiết + số học sinh; TUTOR theo `tutor_id`, STUDENT theo enrollment ACTIVE của mình, PARENT theo liên kết con + enrollment ACTIVE, ADMIN mọi lớp; sai ownership → 404 |
 | PUT | `/classes/{id}` | TUTOR/ADMIN | cập nhật; đổi `GROUP` → `ONE_ON_ONE` khi có ≥ 2 học sinh đang học → 422 |
 | POST | `/classes/{id}/archive` | TUTOR/ADMIN | lưu trữ lớp |
 | GET | `/classes/{id}/students` | TUTOR/ADMIN | danh sách ghi danh |

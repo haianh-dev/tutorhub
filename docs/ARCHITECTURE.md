@@ -75,7 +75,7 @@ tutorhub/
 
 Quy ước: khóa chính `BIGINT GENERATED ALWAYS AS IDENTITY`; thời gian `timestamptz` (UTC); `created_at`, `updated_at` ở mọi bảng; tên bảng số nhiều, snake_case.
 
-V3 tạo `password_reset_tokens`. V4 đưa trước các bảng ownership tối thiểu (`classes`, `class_enrollments`, `parent_students`) để hoàn thành kiểm tra quyền của T1.3; T2.1/T2.2 sẽ bổ sung nghiệp vụ/API lớp học trên các bảng này.
+V3 tạo `password_reset_tokens`. V4 đưa trước các bảng ownership tối thiểu (`classes`, `class_enrollments`, `parent_students`) để hoàn thành kiểm tra quyền của T1.3. T2.1 đã triển khai entity/repository, CRUD/archive lớp, tìm kiếm/phân trang và quyền đọc lớp theo TUTOR/STUDENT/PARENT/ADMIN trên các bảng này; T2.2 tiếp tục triển khai enrollment writes và ràng buộc sĩ số 1:1.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS btree_gist;

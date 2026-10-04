@@ -29,6 +29,7 @@ public enum ErrorCode {
 
     // ── Business rules ───────────────────────────────────
     CLASS_FULL(422, "Class enrollment limit reached"),
+    CLASS_TYPE_CHANGE_INVALID(422, "Cannot change class type due to active enrollment count"),
     CYCLE_INVALID(422, "Tuition cycle operation invalid"),
     INVITATION_EXPIRED(410, "Invitation expired"),
     INVITATION_USED(410, "Invitation already used"),

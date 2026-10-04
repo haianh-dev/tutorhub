@@ -39,6 +39,9 @@ Test DB dùng PostgreSQL thật qua Testcontainers (không dùng H2, vì cần `
 
 ### Lớp học
 - Tạo/sửa/archive hợp lệ; tên rỗng → 400; thiếu/sai `classType` → 400; ghi danh trùng → 409; bỏ học sinh rồi ghi danh lại hoạt động đúng.
+- `GET /classes`: TUTOR chỉ thấy lớp mình; STUDENT chỉ thấy lớp có enrollment ACTIVE của mình và `studentId` do client gửi bị bỏ qua; PARENT chỉ thấy lớp của con đã liên kết, lọc `studentId` không thuộc phụ huynh không được lộ dữ liệu; ADMIN thấy lớp mọi gia sư.
+- `GET /classes/{id}`: STUDENT/PARENT chỉ đọc lớp theo enrollment/liên kết; lớp ngoài ownership → 404. STUDENT/PARENT tạo/sửa/archive → 403.
+- ADMIN tạo lớp phải truyền `tutorId` hợp lệ có role TUTOR; thiếu tutorId/sai role → 400; TUTOR truyền `tutorId` giả vẫn gán lớp cho chính mình.
 - Lớp `ONE_ON_ONE`: thêm học sinh thứ 2 → 422 `ONE_ON_ONE_FULL`; học sinh 1 rời lớp (`LEFT`) rồi thêm học sinh mới → thành công; **hai request thêm học sinh đồng thời** vào lớp 1:1 trống → đúng 1 thành công.
 - Lớp `GROUP`: thêm nhiều học sinh thành công; dưới 2 học sinh vẫn tạo được và trả `warnings`.
 - Đổi loại: `ONE_ON_ONE` → `GROUP` luôn được; `GROUP` → `ONE_ON_ONE` với ≥ 2 học sinh đang học → 422, với ≤ 1 → thành công.

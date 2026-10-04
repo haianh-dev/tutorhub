@@ -1,6 +1,8 @@
 package com.tutorhub.auth.controller;
 
 import com.tutorhub.auth.dto.AuthResponse;
+import com.tutorhub.auth.dto.AcceptInvitationRequest;
+import com.tutorhub.auth.dto.InvitationResponse;
 import com.tutorhub.auth.dto.LogoutRequest;
 import com.tutorhub.auth.dto.LoginRequest;
 import com.tutorhub.auth.dto.ResetPasswordRequest;
@@ -9,6 +11,7 @@ import com.tutorhub.auth.dto.RegisterResponse;
 import com.tutorhub.auth.dto.RegisterTutorRequest;
 import com.tutorhub.auth.dto.TokenPairResponse;
 import com.tutorhub.auth.service.AuthService;
+import com.tutorhub.auth.service.InvitationService;
 import com.tutorhub.auth.service.PasswordResetService;
 import com.tutorhub.auth.security.UserPrincipal;
 import com.tutorhub.user.dto.UserResponse;
@@ -16,6 +19,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +34,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final InvitationService invitationService;
 
     @PostMapping("/register-tutor")
     @ResponseStatus(HttpStatus.CREATED)
@@ -60,5 +66,24 @@ public class AuthController {
     @ResponseStatus(HttpStatus.OK)
     public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         passwordResetService.resetPassword(request);
+    }
+
+    /**
+     * Kiểm tra lời mời còn hiệu lực không.
+     * Public endpoint — dùng để frontend hiển thị form và thông tin lời mời.
+     */
+    @GetMapping("/invitations/{token}")
+    public InvitationResponse getInvitation(@PathVariable String token) {
+        return invitationService.verifyInvitation(token);
+    }
+
+    /**
+     * Chấp nhận lời mời: tạo tài khoản và tự đăng nhập.
+     * Public endpoint — token trong request body là raw token từ URL.
+     */
+    @PostMapping("/accept-invitation")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AuthResponse acceptInvitation(@Valid @RequestBody AcceptInvitationRequest request) {
+        return invitationService.acceptInvitation(request);
     }
 }

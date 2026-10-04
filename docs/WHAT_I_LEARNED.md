@@ -194,6 +194,44 @@
 
 ---
 
+## Task: T1.3 - Refresh Token Rotation, Logout, Đổi Mật Khẩu & Sinh Link Reset Mật Khẩu
+
+**Concepts:**
+- **Refresh Token Rotation (Xoay vòng token) & Ngăn ngừa Tái sử dụng (Reuse Detection):**
+  - Mỗi khi client gọi `/api/v1/auth/refresh`, refresh token hiện tại lập tức bị thu hồi (`revoked_at = Instant.now()`) và một cặp `accessToken` + `refreshToken` hoàn toàn mới được cấp phát.
+  - Ngăn ngừa Reuse: Nếu một token đã bị thu hồi mà tiếp tục được gửi lên (dấu hiệu token bị đánh cắp hoặc rò rỉ), hệ thống từ chối ngay với HTTP 401 `AUTH_TOKEN_INVALID`.
+- **Single-use Password Reset Token với Hashing SHA-256:**
+  - Token đặt lại mật khẩu là chuỗi ngẫu nhiên có độ dài bảo mật cao (UUID/SecureRandom).
+  - Tuyệt đối không lưu raw token vào DB để tránh rủi ro khi bị dump DB; chỉ lưu chuỗi băm **SHA-256** (`token_hash UNIQUE`). Khi client gửi token qua link, server băm SHA-256 rồi tìm kiếm bản ghi tương ứng.
+  - Single-use: Trường `used_at` ghi lại thời điểm sử dụng. Nếu token đã dùng (`used_at IS NOT NULL`) hoặc đã hết hạn TTL (30 phút, `expires_at < Instant.now()`), hệ thống trả về mã lỗi HTTP 410 `PASSWORD_RESET_INVALID` (RFC 7807).
+- **Pessimistic Locking (`SELECT ... FOR UPDATE`) Chống Race Condition:**
+  - Khi có hai request đồng thời gửi cùng một refresh token hoặc reset token, có thể xảy ra race condition khiến cả hai đều vượt qua điều kiện kiểm tra (chưa dùng / chưa thu hồi).
+  - Sử dụng `@Lock(LockModeType.PESSIMISTIC_WRITE)` (`findByTokenHashForUpdate`) để đặt Exclusive Lock dòng dữ liệu ở cấp độ DB trong suốt `@Transactional`, đảm bảo chỉ request đầu tiên thành công và request thứ hai bị từ chối.
+- **Thu hồi phiên đăng nhập diện rộng (Revoke All Active Sessions):**
+  - Khi người dùng đổi mật khẩu thành công (`PUT /api/v1/me/password`) hoặc hoàn tất đặt lại mật khẩu (`POST /api/v1/auth/reset-password`), hệ thống tự động thu hồi toàn bộ refresh token đang hoạt động của user đó (`revoked_at = Instant.now()`), buộc mọi thiết bị khác phải đăng nhập lại với mật khẩu mới.
+- **Kiểm tra quyền sở hữu theo lớp học (Class Ownership Authorization):**
+  - Theo thiết kế MVP không dùng email server (D-29), gia sư (TUTOR) chủ động sinh link đặt lại mật khẩu gửi cho học sinh/phụ huynh qua Zalo/tin nhắn.
+  - Kiểm tra quyền sở hữu chặt chẽ: TUTOR chỉ được sinh link cho STUDENT đang ghi danh trong lớp của mình, hoặc PARENT có con ghi danh trong lớp của mình. Yêu cầu sinh link cho người ngoài lớp bị từ chối với HTTP 404 (để tránh rò rỉ sự tồn tại của user khác). ADMIN có quyền bypass để sinh link cho bất kỳ tài khoản nào.
+
+**Architecture & Config:**
+- **Schema Migrations (V3 & V4):**
+  - `V3__create_password_reset_tokens.sql`: Bảng lưu token reset với các cột `token_hash`, `expires_at`, `used_at`, `user_id FK ON DELETE CASCADE`.
+  - `V4__create_class_ownership_schema.sql`: Khởi tạo sớm các bảng cốt lõi `classes`, `class_enrollments`, `parent_students` (theo quyết định D-36) để hỗ trợ truy vấn kiểm tra quyền sở hữu TUTOR -> STUDENT/PARENT ngay từ tầng JPA/JDBC.
+- **Phân tách Controller theo ngữ cảnh người dùng:**
+  - `AuthController`: Quản lý các endpoint xác thực công khai hoặc luồng lifecycle token (`/refresh`, `/logout`, `/reset-password`).
+  - `MeController`: Quản lý tài nguyên của chính người dùng hiện tại (`/api/v1/me`, `/api/v1/me/password`), định danh người dùng qua `UserPrincipal` trích xuất từ JWT SecurityContext, không tin cậy `userId` do client gửi lên.
+  - `UserController`: Endpoint quản trị và phân quyền (`/api/v1/users/{id}/password-reset-link`), bảo vệ bằng `@PreAuthorize("hasAnyRole('TUTOR', 'ADMIN')")`.
+- **Xử lý ngoại lệ bảo mật chuẩn RFC 7807 (`RestSecurityExceptionHandler`):**
+  - Triển khai `AuthenticationEntryPoint` (401 Unauthorized) và `AccessDeniedHandler` (403 Forbidden) để định dạng lỗi bảo mật trả về cấu trúc JSON ProblemDetail thống nhất với toàn hệ thống, thay thế trang lỗi HTML mặc định của Spring Security.
+
+**Important decision & Debugging tips:**
+- **JUnit 5 `@Nested` Test Classes trong Maven Surefire:**
+  - Khi tổ chức test case theo các class `@Nested` (ví dụ trong `AuthServiceTest`, `GlobalExceptionHandlerTest`), class cha có thể hiển thị `Tests run: 0` trên báo cáo root. Cần chạy qua JUnit Platform engine để đảm bảo toàn bộ nested tests đều được quét và thực thi.
+- **Bảo vệ Endpoint Logout:**
+  - Endpoint `POST /api/v1/auth/logout` yêu cầu người dùng phải xác thực (Bearer Token) và chỉ cho phép thu hồi refresh token thuộc về chính người dùng đó, ngăn chặn việc kẻ tấn công gửi bừa token hash của người khác để ép họ bị logout (Denial of Service).
+
+---
+
 ## 🛠️ Tips & Debugging Thường Gặp
 
 ### Lỗi: `Web server failed to start. Port 8080 was already in use.`
@@ -211,4 +249,47 @@
      # hoặc dùng lệnh Command Prompt:
      taskkill /PID <PID> /F
      ```
+
+---
+
+## Task: T1.4 — Lời mời Học sinh / Phụ huynh (Invitations)
+
+**Concepts:**
+- **Invitation Token: Single-use + SHA-256 Hash:**
+  - Giống với pattern reset password (T1.3), raw token được tạo bằng `SecureRandom` (32 bytes, Base64 URL-safe), **không bao giờ lưu raw token vào DB**. Chỉ lưu chuỗi băm **SHA-256** (`token_hash UNIQUE`). Khi người dùng gửi token qua link, backend băm lại và tra bảng `token_hash`.
+  - **Single-use**: Trường `used_at` ghi thời điểm sử dụng. Token đã dùng (`used_at IS NOT NULL`) hoặc hết hạn (`expires_at < now`) → 410 `INVITATION_USED` / `INVITATION_EXPIRED`.
+  - **Pessimistic lock** (`findByTokenHashForUpdate`) khi accept: ngăn hai request đồng thời cùng "chấp nhận" một invitation gây race condition.
+
+- **Luồng nghiệp vụ theo role:**
+  - `role=STUDENT`: tạo tài khoản STUDENT → nếu invitation có `class_id` → ghi danh vào lớp (`INSERT INTO class_enrollments ... ON CONFLICT DO UPDATE`).
+  - `role=PARENT`: tạo tài khoản PARENT + liên kết phụ huynh-học sinh (`INSERT INTO parent_students ... ON CONFLICT DO NOTHING`).
+  - Sau khi tạo tài khoản → **tự đăng nhập**: sinh access token + refresh token → trả về `AuthResponse` (không cần đăng nhập lại thủ công).
+
+- **Ownership Check cho TUTOR:**
+  - TUTOR chỉ được mời học sinh vào lớp **ACTIVE của chính họ** (`CHECK_TUTOR_OWNS_CLASS_SQL`).
+  - Khi mời PARENT, học sinh trong `studentId` phải đang học trong ít nhất một lớp ACTIVE của TUTOR đó (`CHECK_STUDENT_IN_TUTOR_CLASS_SQL`).
+  - Nếu không hợp lệ → 404 `RESOURCE_NOT_FOUND` (ẩn sự tồn tại, tránh information disclosure).
+  - ADMIN không bị giới hạn (không qua ownership check).
+
+- **Sử dụng `Long classId` thay vì `@ManyToOne` cho `classes`:**
+  - Entity `Class` chưa tồn tại ở T1.4 (sẽ tạo ở T2.1). Dùng `Long classId` (raw FK column) trong entity `Invitation` để tránh circular dependency và giữ phạm vi task. Khi T2.1 tạo `Class` entity, có thể nâng lên `@ManyToOne` nếu cần.
+
+**Architecture & Config:**
+- **V5 Migration** (`V5__create_invitations.sql`): Bảng `invitations` với `token_hash UNIQUE`, `role CHECK (IN 'STUDENT','PARENT')`, `class_id FK REFERENCES classes ON DELETE SET NULL`, `student_id FK REFERENCES users ON DELETE SET NULL`, `expires_at`, `used_at`.
+- **3 Endpoint mới:**
+  - `POST /api/v1/invitations` — yêu cầu xác thực TUTOR/ADMIN (`InvitationController`), trả về link đầy đủ + expiresAt.
+  - `GET /api/v1/auth/invitations/{token}` — public, xác minh token còn hợp lệ, trả role/email/className.
+  - `POST /api/v1/auth/accept-invitation` — public, tạo tài khoản + ghi danh/liên kết + tự đăng nhập.
+- **Security Config**: `/api/v1/auth/accept-invitation` và `/api/v1/auth/invitations/**` đã có trong `permitAll()` từ T1.3.
+- **Link building**: Dùng `UriComponentsBuilder` để xây dựng link `{frontendBaseUrl}/accept-invitation?token={rawToken}` — có thể cấu hình qua `app.frontend.base-url` trong `application.yml`.
+
+**Important decision & Debugging tips:**
+- **@DataJpaTest + Real PostgreSQL: Data Leak từ @SpringBootTest:**
+  - `@SpringBootTest` (dùng cho integration tests như `InvitationIntegrationTest`, `AuthIntegrationTest`) không rollback — mọi commit vào DB đều tồn tại sau khi test chạy xong.
+  - `@DataJpaTest` bọc mỗi test trong `@Transactional` rollback, **nhưng** dữ liệu đã commit từ `@SpringBootTest` trước đó vẫn còn trong DB và không bị cuốn vào transaction rollback của `@DataJpaTest`.
+  - **Giải pháp**: Thêm `@BeforeEach` vào `@DataJpaTest` test class, dùng `JdbcTemplate.update("DELETE FROM ...")` theo thứ tự FK đúng, sau đó `entityManager.flush(); entityManager.clear()` để xóa JPA first-level cache. **Không** dùng `userRepository.deleteAll()` vì JPA cache có thể không nhất quán với DB sau lệnh JDBC.
+  - **Thứ tự xóa FK quan trọng**: `invitations` → `password_reset_tokens` → `refresh_tokens` → `parent_students` → `class_enrollments` → `classes` → `users`. Sai thứ tự sẽ bị PostgreSQL FK constraint rejection.
+
+- **Tại sao không dùng email trong `AcceptInvitationRequest`:**
+  - `users.email` là `NOT NULL` theo schema. Email người nhận lời mời được lấy từ `invitation.email` (điền khi TUTOR tạo lời mời). Nếu gia sư không điền email khi tạo lời mời → báo lỗi validation khi accept (yêu cầu gia sư tạo lại có email). Thiết kế này phù hợp với quy trình: gia sư biết email người được mời khi soạn lời mời.
 

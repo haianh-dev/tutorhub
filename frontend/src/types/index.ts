@@ -10,7 +10,50 @@ export interface User {
   role: Role;
   status: UserStatus;
   createdAt: string;
-  updatedAt: string;
+}
+
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface AuthResponse extends AuthTokens {
+  user: User;
+}
+
+export interface RegisterResponse {
+  user: User;
+}
+
+export interface InvitationInfo {
+  role: 'STUDENT' | 'PARENT';
+  email?: string;
+  className?: string;
+  expiresAt: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterTutorRequest {
+  email: string;
+  password: string;
+  fullName: string;
+  phone?: string;
+}
+
+export interface AcceptInvitationRequest {
+  token: string;
+  password: string;
+  fullName: string;
+  phone?: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
 }
 
 export type ClassType = 'ONE_ON_ONE' | 'GROUP';
@@ -67,6 +110,11 @@ export interface AssignmentScore {
   gradedAt?: string;
 }
 
+export interface ApiFieldError {
+  field: string;
+  message: string;
+}
+
 export interface ApiProblemDetail {
   type?: string;
   title?: string;
@@ -75,8 +123,5 @@ export interface ApiProblemDetail {
   instance?: string;
   code?: string;
   timestamp?: string;
-  invalidParams?: Array<{
-    field: string;
-    message: string;
-  }>;
+  errors?: ApiFieldError[];
 }

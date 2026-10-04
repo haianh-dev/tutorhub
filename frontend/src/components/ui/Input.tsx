@@ -5,6 +5,8 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   error?: string;
   helperText?: string;
   required?: boolean;
+  icon?: React.ReactNode;
+  rightAdornment?: React.ReactNode;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -13,7 +15,10 @@ export const Input: React.FC<InputProps> = ({
   error,
   helperText,
   required,
+  icon,
+  rightAdornment,
   className = '',
+  style,
   ...props
 }) => {
   const generatedId = useId();
@@ -33,14 +38,37 @@ export const Input: React.FC<InputProps> = ({
         </label>
       )}
 
-      <input
-        id={inputId}
-        required={required}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? errorId : helperText ? helperId : undefined}
-        className={`w-full min-h-12 px-4 py-3 bg-paper border-3 border-ink text-ink font-body text-sm placeholder:text-ink/40 transition-none focus-visible:outline-3 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
-        {...props}
-      />
+      <div className="relative w-full">
+        {icon && (
+          <div
+            aria-hidden="true"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center pointer-events-none text-ink/70"
+          >
+            {icon}
+          </div>
+        )}
+
+        {rightAdornment && (
+          <div
+            aria-hidden="true"
+            className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+          >
+            {rightAdornment}
+          </div>
+        )}
+
+        <input
+          id={inputId}
+          required={required}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : helperText ? helperId : undefined}
+          className={`w-full min-h-12 bg-paper border-3 border-ink text-ink font-body text-sm placeholder:text-ink/40 transition-none focus-visible:outline-3 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+            icon ? 'pl-10 pr-4' : 'pl-4 pr-4'
+          } ${rightAdornment ? 'pr-12' : ''} py-3 ${className}`}
+          style={style}
+          {...props}
+        />
+      </div>
 
       {error && (
         <div

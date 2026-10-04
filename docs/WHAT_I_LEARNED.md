@@ -293,3 +293,38 @@
 - **Tại sao không dùng email trong `AcceptInvitationRequest`:**
   - `users.email` là `NOT NULL` theo schema. Email người nhận lời mời được lấy từ `invitation.email` (điền khi TUTOR tạo lời mời). Nếu gia sư không điền email khi tạo lời mời → báo lỗi validation khi accept (yêu cầu gia sư tạo lại có email). Thiết kế này phù hợp với quy trình: gia sư biết email người được mời khi soạn lời mời.
 
+---
+
+## Task: T1.5 — Security Config: Role-Based Access Control (RBAC) & Test truy cập trái quyền mẫu
+
+**Concepts:**
+- **Kiến trúc bảo mật hai tầng (Two-Tier Security Architecture):**
+  1. *Tầng URL Filter Chain (`SecurityFilterChain`)*:
+     - Xử lý xác thực sơ bộ: Các public endpoint (`/api/v1/auth/login`, `/register-tutor`, `/refresh`, `/reset-password`, `/accept-invitation`, `/invitations/**`, `/actuator/**`) được đưa vào `permitAll()`.
+     - Mọi endpoint còn lại được bảo vệ bằng `.anyRequest().authenticated()`.
+     - Request không có token hoặc token không hợp lệ (sai signature, malformed, hết hạn, user bị vô hiệu hóa) sẽ bị chặn ngay tại filter chain bởi `AuthenticationEntryPoint` (`RestSecurityExceptionHandler.commence`), trả về HTTP `401 Unauthorized` kèm ProblemDetail RFC 7807 (`code: "AUTH_TOKEN_INVALID"`).
+  2. *Tầng Method Security (`@EnableMethodSecurity`)*:
+     - Phân quyền chi tiết theo vai trò dựa trên annotations `@PreAuthorize("hasRole('ADMIN')")` hoặc `@PreAuthorize("hasAnyRole('TUTOR', 'ADMIN')")`.
+     - Chuẩn hóa tiền tố `ROLE_`: Spring Security ngầm định `hasRole('ADMIN')` kiểm tra authority `ROLE_ADMIN`. Class `UserPrincipal.authorities()` chuyển đổi enum `Role` sang `SimpleGrantedAuthority("ROLE_" + role.name())`.
+     - Khi user có token hợp lệ nhưng vai trò không đủ quyền: Spring Security ném `AccessDeniedException`. Lỗi này được bắt bởi `GlobalExceptionHandler` (`@ExceptionHandler(AccessDeniedException.class)`) và `RestSecurityExceptionHandler.handle`, trả về HTTP `403 Forbidden` kèm ProblemDetail RFC 7807 (`code: "AUTH_ACCESS_DENIED"`).
+
+- **Đồng bộ xử lý lỗi bảo mật qua RFC 7807 (ProblemDetail):**
+  - Tránh triệt để việc Spring Security trả về trang HTML 401/403 mặc định hoặc payload không nhất quán.
+  - Bổ sung `@ExceptionHandler(AuthenticationException.class)` vào `GlobalExceptionHandler` để đảm bảo ngay cả khi lỗi xác thực ném ra ở tầng Web/Controller method, response vẫn luôn là RFC 7807 với `status: 401`, `code: "AUTH_TOKEN_INVALID"`, tiếng Việt detail.
+  - Định dạng Content-Type luôn tương thích với `application/problem+json;charset=UTF-8`.
+
+**Architecture & Test Coverage:**
+- **Bộ kiểm thử mẫu `SecurityAccessControlIntegrationTest` (26 test cases):**
+  - *Nhóm 1: Unauthenticated (9 tests)*: Kiểm tra không token trên 5 endpoints thực tế (`/me`, `/me/password`, `/auth/logout`, `/invitations`, `/users/{id}/password-reset-link`), header không có tiền tố Bearer, token JWT rác (malformed), token sai chữ ký (forged secret key), token hết hạn (expired timestamp), token của user có trạng thái `DISABLED`. Tất cả trả về 401 `AUTH_TOKEN_INVALID`.
+  - *Nhóm 2: Forbidden Role (4 tests)*: `STUDENT` và `PARENT` gọi `POST /api/v1/invitations` hoặc `POST /api/v1/users/{id}/password-reset-link`. Tất cả trả về 403 `AUTH_ACCESS_DENIED`.
+  - *Nhóm 3: Authorized Role (3 tests)*: `TUTOR` và `ADMIN` gọi endpoint quản lý → vượt qua security (201 Created); Cả 4 vai trò (`ADMIN`, `TUTOR`, `STUDENT`, `PARENT`) đều truy cập được endpoint chung `/api/v1/me` → 200 OK.
+  - *Nhóm 4: Public Endpoints (5 tests)*: Endpoint công khai không bị chặn 401 khi không gửi token (trả về 400 validation nếu payload rỗng, hoặc 410, hoặc 200).
+  - *Nhóm 5: Ma trận phân quyền 4 vai trò mẫu (5 tests)*: Sử dụng Test Controller nội bộ kiểm thử độc lập ma trận 4 roles x 4 mức phân quyền (`admin-only`, `tutor-only`, `student-only`, `parent-only`, `tutor-or-admin`), xác nhận cơ chế method security của Spring Security phân tách vai trò tuyệt đối chính xác.
+
+**Important decision & Debugging tips:**
+- **MockMvc Content-Type Header matching:**
+  - `MockMvc.andExpect(header().string("Content-Type", equalTo("application/problem+json")))` có thể fail nếu response trả về có thêm `charset=UTF-8` (`application/problem+json;charset=UTF-8`).
+  - **Giải pháp chuẩn:** Dùng `.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))` để kiểm tra MIME type một cách an toàn và tương thích.
+- **Trạng thái tài khoản người dùng (`UserStatus`):**
+  - Enum `UserStatus` có hai giá trị: `ACTIVE` và `DISABLED` (không phải `INACTIVE`). Trong `JwtAuthenticationFilter`, kiểm tra `user.getStatus() == UserStatus.ACTIVE` để ngăn chặn token của user bị vô hiệu hóa truy cập hệ thống.
+

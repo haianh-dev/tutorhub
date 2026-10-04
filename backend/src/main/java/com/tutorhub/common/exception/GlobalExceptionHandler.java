@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -61,16 +62,27 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
-        @ExceptionHandler(AccessDeniedException.class)
-        public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
-                ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                                HttpStatus.FORBIDDEN,
-                                "Bạn không có quyền thực hiện thao tác này.");
-                problem.setTitle(ErrorCode.AUTH_ACCESS_DENIED.getDefaultMessage());
-                problem.setType(URI.create("about:blank"));
-                problem.setProperty("code", ErrorCode.AUTH_ACCESS_DENIED.name());
-                return problem;
-        }
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN,
+                "Bạn không có quyền thực hiện thao tác này.");
+        problem.setTitle(ErrorCode.AUTH_ACCESS_DENIED.getDefaultMessage());
+        problem.setType(URI.create("about:blank"));
+        problem.setProperty("code", ErrorCode.AUTH_ACCESS_DENIED.name());
+        return problem;
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ProblemDetail handleAuthentication(AuthenticationException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNAUTHORIZED,
+                "Yêu cầu đăng nhập.");
+        problem.setTitle(ErrorCode.AUTH_TOKEN_INVALID.getDefaultMessage());
+        problem.setType(URI.create("about:blank"));
+        problem.setProperty("code", ErrorCode.AUTH_TOKEN_INVALID.name());
+        return problem;
+    }
 
     // ─── 2. Bean Validation (400) ──────────────────────────────────────
 

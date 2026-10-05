@@ -31,7 +31,7 @@ export const AuthCard: React.FC<AuthCardProps> = ({
             <div className="font-heading font-black text-2xl uppercase tracking-widest text-ink block leading-tight">
               TutorHub
             </div>
-            <div className="font-heading text-[11px] uppercase font-bold tracking-widest text-ink/70 block">
+            <div style={{ fontFamily: '"Quicksand", sans-serif' }} className="text-[11px] uppercase font-bold tracking-widest text-ink/70 block">
               Quản lý lịch & Lớp học
             </div>
           </div>
@@ -44,7 +44,7 @@ export const AuthCard: React.FC<AuthCardProps> = ({
               {title}
             </h2>
             {subtitle && (
-              <p className="font-body text-sm text-ink/75 leading-relaxed">
+              <p style={{ fontFamily: 'system-ui' }} className="text-sm text-ink/75 leading-relaxed">
                 {subtitle}
               </p>
             )}
@@ -56,7 +56,7 @@ export const AuthCard: React.FC<AuthCardProps> = ({
         {/* Footer link */}
         {footer && (
           <div className="border-3 border-ink bg-paper p-4 text-center brut-box">
-            <div className="font-body text-sm text-ink/85 leading-relaxed">
+            <div style={{ fontFamily: 'system-ui' }} className="text-sm text-ink/85 leading-relaxed">
               {footer}
             </div>
           </div>

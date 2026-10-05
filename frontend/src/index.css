@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Quicksand:wght@400;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
@@ -11,7 +12,7 @@
 
   /* Fonts */
   --font-heading: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Space Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-body: system-ui, -apple-system, sans-serif;
 
   /* Hard shadows: KHÔNG blur */
   --shadow-hard-sm: 2px 2px 0 var(--color-ink);

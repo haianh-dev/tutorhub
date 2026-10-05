@@ -112,7 +112,7 @@ export const LoginPage: React.FC = () => {
           >
             Đăng ký gia sư
           </Link>
-          <div className="mt-2 pt-2 border-t-2 border-ink/20 text-xs font-body text-ink/70 leading-relaxed">
+          <div style={{ fontFamily: 'system-ui' }} className="mt-2 pt-2 border-t-2 border-ink/20 text-xs text-ink/70 leading-relaxed">
             Bạn là học sinh hoặc phụ huynh?<br />
             Sử dụng <strong>link lời mời</strong> do gia sư gửi qua Zalo/tin
             nhắn để tạo tài khoản.

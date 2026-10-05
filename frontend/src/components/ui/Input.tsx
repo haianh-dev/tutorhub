@@ -62,10 +62,10 @@ export const Input: React.FC<InputProps> = ({
           required={required}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : helperText ? helperId : undefined}
-          className={`w-full min-h-12 bg-paper border-3 border-ink text-ink font-body text-sm placeholder:text-ink/40 transition-none focus-visible:outline-3 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`w-full min-h-12 bg-paper border-3 border-ink text-ink text-sm placeholder:text-ink/40 transition-none focus-visible:outline-3 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
             icon ? 'pl-10 pr-4' : 'pl-4 pr-4'
           } ${rightAdornment ? 'pr-12' : ''} py-3 ${className}`}
-          style={style}
+          style={{ fontFamily: 'system-ui', ...style }}
           {...props}
         />
       </div>

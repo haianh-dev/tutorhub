@@ -328,3 +328,22 @@
 - **Trạng thái tài khoản người dùng (`UserStatus`):**
   - Enum `UserStatus` có hai giá trị: `ACTIVE` và `DISABLED` (không phải `INACTIVE`). Trong `JwtAuthenticationFilter`, kiểm tra `user.getStatus() == UserStatus.ACTIVE` để ngăn chặn token của user bị vô hiệu hóa truy cập hệ thống.
 
+---
+
+## Task: T2.2 — Ghi danh / Bỏ học sinh & Quy tắc lớp 1:1, Lớp nhóm
+
+**Concepts:**
+- **Pessimistic Locking chống Race Condition trong nghiệp vụ giới hạn lớp 1:1:**
+  - Lớp `ONE_ON_ONE` chỉ cho phép tối đa 1 học sinh đang học (`ACTIVE`). Nếu chỉ kiểm tra bằng `countByClazzIdAndStatus` thông thường trong code mà không khóa dòng DB, hai request đồng thời có thể cùng đọc sĩ số = 0 và cùng thêm học sinh thành công (Race Condition vi phạm quy tắc 1:1).
+  - **Giải pháp:** Sử dụng `@Lock(LockModeType.PESSIMISTIC_WRITE)` trên phương thức truy vấn `ClassRepository.findByIdForUpdate(classId)` (`SELECT ... FOR UPDATE`). Transaction đầu tiên khóa bản ghi lớp, transaction thứ hai bắt buộc phải đợi cho đến khi transaction đầu commit. Khi transaction thứ hai đọc, sĩ số đã là 1 và lập tức ném lỗi HTTP 422 `ONE_ON_ONE_FULL`.
+  - Kiểm thử đồng thời (Concurrency Test) bằng `ExecutorService` + `CountDownLatch` xác nhận: 2 luồng thêm 2 học sinh khác nhau vào lớp 1:1 trống đồng thời chỉ có đúng 1 luồng thành công (201), luồng còn lại nhận lỗi 422.
+
+- **Vòng đời Ghi danh (Enrollment Lifecycle) & Unique Constraint:**
+  - Bảng `class_enrollments` có ràng buộc duy nhất `UNIQUE (class_id, student_id)`.
+  - Khi học sinh rời lớp (`DELETE /classes/{id}/students/{studentId}`): Không xóa cứng bản ghi mà đặt `status = LEFT`, `leftAt = Instant.now()`.
+  - Khi học sinh tái ghi danh: Nếu tạo mới `INSERT` sẽ vi phạm unique constraint. Do đó, kiểm tra bản ghi cũ: nếu đang `LEFT` thì tái kích hoạt cập nhật `status = ACTIVE`, `enrolledAt = now`, `leftAt = null`. Nếu đang `ACTIVE` thì ném lỗi 409 `ENROLLMENT_DUPLICATE`.
+
+- **Cảnh báo lớp nhóm (GROUP) dưới 2 học sinh:**
+  - Lớp `GROUP` không giới hạn số lượng học sinh tối đa, và theo D-24, gia sư có thể tạo lớp trước rồi thêm học sinh dần nên không chặn khi < 2 học sinh.
+  - Trường `warnings` trong `ClassResponse` tự động bổ sung thông báo `"Lớp nhóm hiện có ít hơn 2 học sinh"` khi `classType == GROUP` và `studentCount < 2`, và trở thành mảng rỗng khi đã đủ từ 2 học sinh trở lên.
+

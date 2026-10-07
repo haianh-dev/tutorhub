@@ -1,6 +1,9 @@
 package com.tutorhub.classroom.service;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -12,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.tutorhub.classroom.dto.ClassResponse;
 import com.tutorhub.classroom.dto.CreateClassRequest;
+import com.tutorhub.classroom.dto.EnrollStudentRequest;
+import com.tutorhub.classroom.dto.EnrollmentResponse;
 import com.tutorhub.classroom.dto.UpdateClassRequest;
+import com.tutorhub.classroom.entity.ClassEnrollment;
 import com.tutorhub.classroom.entity.ClassEntity;
 import com.tutorhub.classroom.entity.ClassStatus;
 import com.tutorhub.classroom.entity.ClassType;
@@ -30,26 +36,7 @@ import com.tutorhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Service quản lý nghiệp vụ lớp học (T2.1: CRUD lớp + archive).
- *
- * <p>
- * Quy tắc cốt lõi:
- * </p>
- * <ul>
- * <li><b>Quyền sở hữu (BR-1):</b> TUTOR chỉ truy cập lớp có
- * {@code tutor_id = id của mình}.
- * Truy cập sai (lớp của gia sư khác) → trả <b>404 RESOURCE_NOT_FOUND</b> (không
- * lộ sự tồn tại của lớp).
- * ADMIN bỏ qua ownership filter — truy cập mọi lớp (D-27 CONFIRMED).</li>
- * <li><b>Loại lớp bắt buộc (AC T2.1):</b> classType không được null (Bean
- * Validation ở request DTO).</li>
- * <li><b>FR-2.6 Đổi loại lớp:</b>
- * GROUP → ONE_ON_ONE chỉ khi lớp có ≤ 1 học sinh ACTIVE (≥2 → 422
- * CLASS_TYPE_CHANGE_INVALID).
- * ONE_ON_ONE → GROUP luôn OK.</li>
- * <li><b>ADMIN chỉ định tutorId (D-31 CONFIRMED):</b> ADMIN tạo lớp có quyền
- * truyền tutorId → gia sư phụ trách khác.</li>
- * </ul>
+ * Service quản lý nghiệp vụ lớp học & ghi danh (T2.1: CRUD lớp + archive; T2.2: Ghi danh/bỏ học sinh).
  */
 @Service
 @RequiredArgsConstructor
@@ -64,13 +51,6 @@ public class ClassService {
 
     /**
      * Trả về trang {@link ClassResponse} dựa trên vai trò người gọi.
-     *
-     * @param actorId   ID người dùng (từ JWT)
-     * @param actorRole Vai trò người dùng (từ JWT)
-     * @param status    Lọc theo trạng thái (null = tất cả)
-     * @param q         Từ khóa search theo tên lớp (LIKE %q%, không phân biệt hoa
-     *                  thường)
-     * @param pageable  Phân trang + sắp xếp
      */
     @Transactional(readOnly = true)
     public Page<ClassResponse> getClasses(
@@ -106,24 +86,16 @@ public class ClassService {
 
     /**
      * Tạo lớp mới.
-     *
-     * @param actorId   Người tạo (từ JWT — không từ client).
-     * @param actorRole Vai trò người tạo.
-     * @param request   Thông tin lớp (name, subject, classType, description,
-     *                  tutorId — chỉ ADMIN dùng).
      */
     @Transactional
     public ClassResponse createClass(Long actorId, Role actorRole, CreateClassRequest request) {
         Long resolvedTutorId = switch (actorRole) {
-            case TUTOR -> actorId; // TUTOR: luôn lấy mình làm gia sư, bỏ qua request.tutorId()
+            case TUTOR -> actorId;
             case ADMIN -> {
-                // ADMIN bắt buộc phải truyền tutorId (quyết định D-31: ADMIN chỉ định gia sư
-                // phụ trách)
                 if (request.tutorId() == null) {
                     throw new AppException(ErrorCode.VALIDATION_ERROR,
                             "ADMIN bắt buộc chỉ định tutorId khi tạo lớp học");
                 }
-                // Validate tutorId tồn tại và đúng vai trò TUTOR
                 User tutor = userRepository.findById(request.tutorId())
                         .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND,
                                 "Gia sư với id=" + request.tutorId() + " không tồn tại"));
@@ -137,7 +109,6 @@ public class ClassService {
                     "Vai trò này không có quyền tạo lớp học");
         };
 
-        // Lấy tutor entity cho mối quan hệ Many-to-One
         User tutor = userRepository.getReferenceById(resolvedTutorId);
 
         ClassEntity entity = ClassEntity.builder()
@@ -152,17 +123,11 @@ public class ClassService {
                 .build();
         entity = classRepository.save(entity);
 
-        // Lớp mới tạo → 0 học sinh
         return ClassResponse.from(entity, 0);
     }
 
     // ─── 3. Chi tiết một lớp ────────────────────────────────────────────────
 
-    /**
-     * Lấy chi tiết lớp theo ID.
-     * TUTOR: phải là chủ sở hữu (tutor_id == actorId) — sai → 404.
-     * ADMIN: OK mọi lớp.
-     */
     @Transactional(readOnly = true)
     public ClassResponse getClassById(Long actorId, Role actorRole, Long classId) {
         ClassEntity entity = loadAndCheckOwnership(actorId, actorRole, classId);
@@ -172,24 +137,10 @@ public class ClassService {
 
     // ─── 4. Cập nhật lớp (partial update) + validate đổi classType FR-2.6 ──
 
-    /**
-     * Cập nhật thông tin lớp.
-     * Các trường null trong {@link UpdateClassRequest} giữ nguyên giá trị cũ.
-     *
-     * <p>
-     * <b>FR-2.6 đổi classType:</b>
-     * </p>
-     * <ul>
-     * <li>ONE_ON_ONE → GROUP: luôn OK (cho phép thêm học sinh).</li>
-     * <li>GROUP → ONE_ON_ONE: chỉ khi lớp có ≤ 1 học sinh ACTIVE (≥2 → 422
-     * CLASS_TYPE_CHANGE_INVALID).</li>
-     * </ul>
-     */
     @Transactional
     public ClassResponse updateClass(Long actorId, Role actorRole, Long classId, UpdateClassRequest request) {
         ClassEntity entity = loadAndCheckOwnership(actorId, actorRole, classId);
 
-        // ── 4a. Validate đổi classType FR-2.6 ──────────────────────────────
         ClassType newType = request.classType();
         if (newType != null && !newType.equals(entity.getClassType())) {
             if (newType == ClassType.ONE_ON_ONE && entity.getClassType() == ClassType.GROUP) {
@@ -204,7 +155,6 @@ public class ClassService {
             entity.setClassType(newType);
         }
 
-        // ── 4b. Partial update các trường khác (null → giữ nguyên) ─────────
         if (request.name() != null) {
             if (request.name().isBlank()) {
                 throw new AppException(ErrorCode.VALIDATION_ERROR, "Tên lớp không được để trống");
@@ -228,11 +178,6 @@ public class ClassService {
 
     // ─── 5. Archive (lưu trữ) lớp ──────────────────────────────────────────
 
-    /**
-     * Đánh dấu lớp là ARCHIVED (xóa mềm theo D-20: không xóa cứng khi đã có
-     * buổi/điểm).
-     * Không hỗ trợ unarchive cho đơn giản MVP — nếu cần có thể thêm sau.
-     */
     @Transactional
     public ClassResponse archiveClass(Long actorId, Role actorRole, Long classId) {
         ClassEntity entity = loadAndCheckOwnership(actorId, actorRole, classId);
@@ -242,30 +187,105 @@ public class ClassService {
         return ClassResponse.from(entity, studentCount);
     }
 
-    // ─── Private helpers ─────────────────────────────────────────────────────
+    // ─── 6. Ghi danh học sinh vào lớp (T2.2) ────────────────────────────────
 
     /**
-     * Load ClassEntity theo id và kiểm tra quyền sở hữu (one-liner dùng chung mọi
-     * method).
-     *
-     * <p>
-     * Quy tắc:
-     * </p>
-     * <ul>
-     * <li>Không tồn tại lớp theo id → 404.</li>
-     * <li>TUTOR gọi: tutor_id khác actorId → 404 (không lộ sự tồn tại).</li>
-     * <li>ADMIN gọi: mọi lớp đều OK.</li>
-     * </ul>
-     *
-     * @return ClassEntity nếu vượt qua mọi check.
+     * Ghi danh học sinh vào lớp học.
+     * Sử dụng Pessimistic Lock trên dòng lớp (findByIdForUpdate) để chống race condition
+     * khi có 2 request đồng thời thêm học sinh vào lớp 1:1.
      */
+    @Transactional
+    public EnrollmentResponse enrollStudent(Long actorId, Role actorRole, Long classId, EnrollStudentRequest request) {
+        // Khóa bi quan dòng lớp học
+        ClassEntity classEntity = loadAndCheckOwnershipForUpdate(actorId, actorRole, classId);
+
+        if (classEntity.getStatus() == ClassStatus.ARCHIVED) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Không thể ghi danh vào lớp học đã lưu trữ (ARCHIVED)");
+        }
+
+        // Validate học sinh tồn tại và có role STUDENT
+        User student = userRepository.findById(request.studentId())
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND,
+                        "Học sinh với id=" + request.studentId() + " không tồn tại"));
+        if (student.getRole() != Role.STUDENT) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR,
+                    "Tài khoản ghi danh phải có vai trò STUDENT (nhận được: " + student.getRole() + ")");
+        }
+
+        // Kiểm tra xem học sinh đã có enrollment trong lớp chưa
+        Optional<ClassEnrollment> existingOpt = classEnrollmentRepository.findByClazzIdAndStudentId(classId, request.studentId());
+        if (existingOpt.isPresent() && existingOpt.get().getStatus() == EnrollmentStatus.ACTIVE) {
+            throw new AppException(ErrorCode.ENROLLMENT_DUPLICATE, "Học sinh đã được ghi danh vào lớp học này");
+        }
+
+        // Validate quy tắc lớp 1:1 (ONE_ON_ONE)
+        if (classEntity.getClassType() == ClassType.ONE_ON_ONE) {
+            int activeCount = classEnrollmentRepository.countByClazzIdAndStatus(classId, EnrollmentStatus.ACTIVE);
+            if (activeCount >= 1) {
+                throw new AppException(ErrorCode.ONE_ON_ONE_FULL,
+                        "Lớp 1:1 chỉ có tối đa 1 học sinh đang học. Không thể thêm học sinh thứ 2.");
+            }
+        }
+
+        Instant now = Instant.now();
+        ClassEnrollment enrollment;
+        if (existingOpt.isPresent()) {
+            // Tái ghi danh học sinh đã LEFT trước đó
+            enrollment = existingOpt.get();
+            enrollment.setStatus(EnrollmentStatus.ACTIVE);
+            enrollment.setEnrolledAt(now);
+            enrollment.setLeftAt(null);
+        } else {
+            // Ghi danh mới
+            enrollment = ClassEnrollment.builder()
+                    .clazz(classEntity)
+                    .student(student)
+                    .status(EnrollmentStatus.ACTIVE)
+                    .enrolledAt(now)
+                    .build();
+        }
+
+        enrollment = classEnrollmentRepository.save(enrollment);
+        return EnrollmentResponse.from(enrollment);
+    }
+
+    // ─── 7. Danh sách học sinh của lớp (T2.2) ──────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<EnrollmentResponse> getStudents(Long actorId, Role actorRole, Long classId, EnrollmentStatus status) {
+        loadAndCheckOwnership(actorId, actorRole, classId);
+
+        List<ClassEnrollment> enrollments = (status != null)
+                ? classEnrollmentRepository.findByClazzIdAndStatusWithStudentOrderByEnrolledAtDesc(classId, status)
+                : classEnrollmentRepository.findByClazzIdWithStudentOrderByEnrolledAtDesc(classId);
+
+        return enrollments.stream().map(EnrollmentResponse::from).toList();
+    }
+
+    // ─── 8. Cho học sinh rời lớp (T2.2) ────────────────────────────────────
+
+    @Transactional
+    public void removeStudent(Long actorId, Role actorRole, Long classId, Long studentId) {
+        loadAndCheckOwnership(actorId, actorRole, classId);
+
+        ClassEnrollment enrollment = classEnrollmentRepository.findByClazzIdAndStudentId(classId, studentId)
+                .filter(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND,
+                        "Học sinh không có ghi danh hoạt động trong lớp học này"));
+
+        enrollment.setStatus(EnrollmentStatus.LEFT);
+        enrollment.setLeftAt(Instant.now());
+        classEnrollmentRepository.save(enrollment);
+    }
+
+    // ─── Private helpers ─────────────────────────────────────────────────────
+
     private ClassEntity loadAndCheckOwnership(Long actorId, Role actorRole, Long classId) {
         ClassEntity entity = classRepository.findByIdWithTutor(classId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND,
                         "Lớp học với id=" + classId + " không tồn tại"));
 
         if (actorRole == Role.TUTOR) {
-            // TUTOR: kiểm tra tutor_id — sai → 404 (không nói rằng lớp của người khác)
             if (!entity.getTutor().getId().equals(actorId)) {
                 throw new AppException(ErrorCode.RESOURCE_NOT_FOUND,
                         "Lớp học với id=" + classId + " không tồn tại");
@@ -280,8 +300,21 @@ public class ClassService {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND,
                     "Lớp học với id=" + classId + " không tồn tại");
         }
-        // ADMIN: không cần check, pass qua. STUDENT/PARENT đã được @PreAuthorize chặn ở
-        // controller.
+
+        return entity;
+    }
+
+    private ClassEntity loadAndCheckOwnershipForUpdate(Long actorId, Role actorRole, Long classId) {
+        ClassEntity entity = classRepository.findByIdForUpdate(classId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND,
+                        "Lớp học với id=" + classId + " không tồn tại"));
+
+        if (actorRole == Role.TUTOR) {
+            if (!entity.getTutor().getId().equals(actorId)) {
+                throw new AppException(ErrorCode.RESOURCE_NOT_FOUND,
+                        "Lớp học với id=" + classId + " không tồn tại");
+            }
+        }
 
         return entity;
     }

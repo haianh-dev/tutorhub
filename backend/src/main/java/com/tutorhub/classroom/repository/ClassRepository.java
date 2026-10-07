@@ -5,9 +5,12 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import jakarta.persistence.LockModeType;
 
 import com.tutorhub.classroom.entity.ClassEntity;
 import com.tutorhub.classroom.entity.ClassStatus;
@@ -119,4 +122,12 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
      */
     @Query("SELECT c FROM ClassEntity c LEFT JOIN FETCH c.tutor WHERE c.id = :id")
     Optional<ClassEntity> findByIdWithTutor(@Param("id") Long id);
+
+    /**
+     * Khóa bi quan (pessimistic write lock) dòng lớp học để chống race condition
+     * khi ghi danh đồng thời vào lớp 1:1.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM ClassEntity c LEFT JOIN FETCH c.tutor WHERE c.id = :id")
+    Optional<ClassEntity> findByIdForUpdate(@Param("id") Long id);
 }

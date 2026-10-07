@@ -59,6 +59,8 @@ export interface ResetPasswordRequest {
 export type ClassType = 'ONE_ON_ONE' | 'GROUP';
 export type ClassStatus = 'ACTIVE' | 'ARCHIVED';
 
+export type EnrollmentStatus = 'ACTIVE' | 'LEFT';
+
 export interface Classroom {
   id: number;
   tutorId: number;
@@ -68,8 +70,66 @@ export interface Classroom {
   classType: ClassType;
   status: ClassStatus;
   studentCount?: number;
+  warnings?: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Enrollment {
+  id: number;
+  classId: number;
+  studentId: number;
+  studentName: string;
+  studentEmail: string;
+  studentPhone?: string;
+  status: EnrollmentStatus;
+  enrolledAt: string;
+  leftAt?: string;
+}
+
+export interface CreateClassRequest {
+  name: string;
+  subject: string;
+  classType: ClassType;
+  description?: string;
+  tutorId?: number;
+}
+
+export interface UpdateClassRequest {
+  name?: string;
+  subject?: string;
+  classType?: ClassType;
+  description?: string;
+}
+
+export interface EnrollStudentRequest {
+  studentId: number;
+}
+
+export interface CreateInvitationRequest {
+  role: 'STUDENT' | 'PARENT';
+  email?: string;
+  classId?: number;
+  studentId?: number;
+}
+
+export interface InvitationResponse {
+  link: string;
+  role: 'STUDENT' | 'PARENT';
+  email?: string;
+  className?: string;
+  expiresAt: string;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
 }
 
 export type SessionStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';

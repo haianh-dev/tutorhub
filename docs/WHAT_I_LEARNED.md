@@ -347,3 +347,26 @@
   - Lớp `GROUP` không giới hạn số lượng học sinh tối đa, và theo D-24, gia sư có thể tạo lớp trước rồi thêm học sinh dần nên không chặn khi < 2 học sinh.
   - Trường `warnings` trong `ClassResponse` tự động bổ sung thông báo `"Lớp nhóm hiện có ít hơn 2 học sinh"` khi `classType == GROUP` và `studentCount < 2`, và trở thành mảng rỗng khi đã đủ từ 2 học sinh trở lên.
 
+---
+
+## Task: T2.3 — Giao diện Lớp học, Quản lý học sinh & Link mời (Frontend)
+
+**Concepts & UI/UX Patterns:**
+- **Neubrutalism Layout trong quản lý Lớp học:**
+  - Sử dụng hệ thống thẻ nổi (pop cards) với viền dày 3px, nền giấy (`bg-paper`), bóng khối sắc nét và badge màu ngữ nghĩa phân biệt rõ loại lớp: Vàng (`bg-yellow`) cho lớp 1:1 và Xanh (`bg-blue`) cho lớp nhóm.
+  - Hiển thị trực quan chỉ số nhanh qua `StatTileGroup` (Tổng số lớp, Lớp 1:1, Lớp nhóm, Tổng học sinh đang theo học).
+  - Tích hợp bộ lọc trạng thái lớp (`ACTIVE`, `ARCHIVED`, `ALL`) và ô tìm kiếm tức thì theo tên lớp / môn học với cơ chế debounce 300ms.
+- **Quy tắc công thái học khi chuyển loại lớp (Form & Business Rule UX):**
+  - Trong Modal tạo và sửa lớp, người dùng có thể linh hoạt chuyển đổi giữa lớp 1:1 và lớp nhóm.
+  - Khi lớp đang có từ 2 học sinh trở lên, giao diện hiển thị cảnh báo chặn trực tiếp nếu người dùng cố gắng chọn chuyển về lớp 1:1, ngăn chặn request không hợp lệ trước khi gửi lên API (khớp mã lỗi backend `CLASS_TYPE_CHANGE_INVALID`).
+- **Liên kết mời học sinh & Phụ huynh (Invitation Link Workflow):**
+  - Tích hợp Modal sinh lời mời (`POST /api/v1/invitations`) gắn với `classId`:
+    - Học sinh (`STUDENT`): Khi nhận lời mời và hoàn tất đăng ký sẽ tự động được ghi danh vào lớp.
+    - Phụ huynh (`PARENT`): Buộc phải chọn học sinh con có mặt trong lớp để thiết lập quan hệ liên kết giám sát.
+  - Link lời mời được hiển thị rõ ràng cùng nút sao chép vào Clipboard (One-click copy) kèm thông báo trực quan "Đã chép" và ghi chú thời hạn 7 ngày.
+- **Xử lý danh sách học sinh & Vòng đời ghi danh (Student Enrollment Tab):**
+  - Trang chi tiết lớp (`/classes/:id`) phân loại học sinh theo 3 tab: Đang học (`ACTIVE`), Đã nghỉ (`LEFT`), và Tất cả.
+  - Hỗ trợ ghi danh trực tiếp theo ID học sinh (kèm kiểm tra lớp 1:1 nếu đã đủ 1 học sinh thì vô hiệu hóa nút ghi danh) và nút "Cho nghỉ" để chuyển trạng thái sang `LEFT` mà không xóa dữ liệu lịch sử.
+- **Ánh xạ lỗi tiếng Việt nhất quán qua RFC 7807:**
+  - Mọi lỗi từ API (`ENROLLMENT_DUPLICATE`, `ONE_ON_ONE_FULL`, `CLASS_TYPE_CHANGE_INVALID`, `CLASS_NOT_FOUND`) được bắt và hiển thị thông báo tiếng Việt thân thiện, rõ nghĩa theo đúng `errorMessages.ts`.
+

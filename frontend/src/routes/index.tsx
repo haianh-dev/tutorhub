@@ -13,6 +13,8 @@ import {
 import type { Role } from '../types';
 import AppLayout from '../components/layout/AppLayout';
 import DashboardPage from '../features/dashboard/DashboardPage';
+import ClassesListPage from '../features/classes/ClassesListPage';
+import ClassDetailPage from '../features/classes/ClassDetailPage';
 import PlaceholderPage from '../components/PlaceholderPage';
 import DevUiPage from '../features/dev/DevUiPage';
 import LoginPage from '../features/auth/pages/LoginPage';
@@ -224,13 +226,11 @@ export const router = createBrowserRouter([
           },
           {
             path: 'classes',
-            element: (
-              <PlaceholderPage
-                title="Quản lý Lớp học & Học sinh"
-                description="Tạo và quản lý lớp học 1:1 hoặc nhóm, ghi danh học sinh và gửi lời mời tham gia lớp."
-                phase="Phase 2 (T2.1 - T2.3)"
-              />
-            ),
+            element: <ClassesListPage />,
+          },
+          {
+            path: 'classes/:id',
+            element: <ClassDetailPage />,
           },
           {
             path: 'schedule',

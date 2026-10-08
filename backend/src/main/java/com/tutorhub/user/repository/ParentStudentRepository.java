@@ -1,5 +1,7 @@
 package com.tutorhub.user.repository;
 
+import java.util.List;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -18,6 +20,14 @@ public class ParentStudentRepository {
                 parentId,
                 studentId);
         return Boolean.TRUE.equals(exists);
+    }
+
+    public List<Long> findStudentIdsByParentId(Long parentId) {
+        return jdbcTemplate.queryForList(
+                "SELECT student_id FROM parent_students WHERE parent_id = ?",
+                Long.class,
+                parentId
+        );
     }
 
     public boolean hasActiveEnrollmentInClass(Long parentId, Long classId) {

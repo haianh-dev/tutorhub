@@ -388,3 +388,24 @@
   - Trong mô hình chuẩn, `sessions` chỉ cần khóa ngoại trỏ tới `class_id` (vì lớp đã có `tutor_id`). Tuy nhiên, ràng buộc EXCLUDE của PostgreSQL chỉ có thể áp dụng trên các cột của **chính bảng đó**, không thể join sang bảng `classes`.
   - Do đó, denormalize cột `tutor_id` vào `sessions` là sự đánh đổi cần thiết để trao toàn bộ trách nhiệm đảm bảo toàn vẹn dữ liệu cho tầng Database engine, bảo đảm an toàn 100% trước mọi race condition.
 
+---
+
+## Task: T3.2 — Service Quản lý Buổi học & Xử lý Trùng lịch (409 SESSION_CONFLICT)
+
+**Concepts & Implementation Details:**
+- **Quy trình 2 lớp phát hiện và ánh xạ lỗi trùng buổi:**
+  - *Lớp 1 (Ứng dụng/Service):* Trước khi ghi xuống DB, service chủ động truy vấn `findOverlappingSessions` trong dải thời gian `[startAt, endAt)` (loại trừ các buổi `CANCELLED` và chính buổi đang sửa). Nếu tìm thấy buổi trùng, service ngay lập tức ném `SessionConflictException` chứa `conflictingSessionId` và message định dạng chuẩn: `"Trùng với buổi #ID (Lớp TênLớp, HH:mm–HH:mm UTC)."`.
+  - *Lớp 2 (Cơ sở dữ liệu):* Nếu xảy ra race condition giữa 2 luồng đồng thời vượt qua lớp 1, PostgreSQL Exclusion Constraint (`exclude_tutor_overlapping_sessions`) sẽ chặn đứng dòng thứ hai và ném `DataIntegrityViolationException`. Khối `catch` trong service (và `GlobalExceptionHandler`) sẽ bắt lại và chuyển thành ProblemDetail 409 `SESSION_CONFLICT`.
+- **Ánh xạ ProblemDetail RFC 7807 với trường mở rộng tùy biến:**
+  - Theo chuẩn RFC 7807, Spring `ProblemDetail` hỗ trợ hàm `setProperty("key", value)` để bổ sung các metadata nghiệp vụ mở rộng.
+  - Khi gặp `SessionConflictException`, `GlobalExceptionHandler` tự động gán `problem.setProperty("conflictingSessionId", conflictEx.getConflictingSessionId())`. Nhờ đó frontend có thể trích xuất chính xác ID buổi bị trùng để hiển thị liên kết trực tiếp tới buổi đó cho gia sư.
+- **Xử lý Dynamic Query với JPA Specification & Khắc phục lỗi PostgreSQL Parameter Type ($n):**
+  - Trong PostgreSQL JDBC driver, việc viết native/HQL query dạng `(? IS NULL OR column >= ?)` với các tham số kiểu `Instant` (`timestamptz`) có thể gây ra lỗi:
+    `ERROR: could not determine data type of parameter $4` khi tham số truyền vào là `null` (do PostgreSQL không thể suy luận kiểu của `null` trong biểu thức so sánh).
+  - **Giải pháp tối ưu:** Sử dụng `JpaSpecificationExecutor<SessionEntity>` kết hợp với Criteria API `Specification<SessionEntity>`. Chỉ thêm `Predicate` vào danh sách khi tham số thực sự khác `null` (ví dụ `if (from != null) predicates.add(cb.greaterThanOrEqualTo(...))`). Câu lệnh SQL sinh ra luôn gọn gàng, đúng kiểu dữ liệu và tận dụng tối đa chỉ mục của PostgreSQL.
+- **Bảo mật và Phân quyền xem Lịch học:**
+  - `TUTOR`: Chỉ xem được các buổi do chính mình phụ trách (`tutor_id = actorId`).
+  - `STUDENT`: Chỉ xem được các buổi thuộc những lớp mà học sinh đang có ghi danh hoạt động (`status = 'ACTIVE'`).
+  - `PARENT`: Chỉ xem được các buổi của lớp mà con mình (đã xác thực qua bảng `parent_students`) đang theo học.
+  - `ADMIN`: Có quyền xem lịch của mọi lớp/mọi gia sư mà không bị giới hạn ownership.
+

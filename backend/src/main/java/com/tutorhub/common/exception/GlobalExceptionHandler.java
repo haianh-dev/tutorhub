@@ -59,6 +59,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setType(URI.create("about:blank"));
         problem.setProperty("code", ex.getErrorCode().name());
 
+        if (ex instanceof com.tutorhub.schedule.exception.SessionConflictException conflictEx) {
+            if (conflictEx.getConflictingSessionId() != null) {
+                problem.setProperty("conflictingSessionId", conflictEx.getConflictingSessionId());
+            }
+        }
+
         return problem;
     }
 
@@ -142,7 +148,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         log.warn("Data integrity violation: {}", rootMessage);
 
         // Exclusion constraint → SESSION_CONFLICT (409)
-        if (rootMessage != null && rootMessage.contains("sessions_no_overlap")) {
+        if (rootMessage != null && (rootMessage.contains("exclude_tutor_overlapping_sessions")
+                || rootMessage.contains("sessions_no_overlap"))) {
             ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                     HttpStatus.CONFLICT,
                     "Buổi học trùng thời gian với buổi khác của gia sư.");

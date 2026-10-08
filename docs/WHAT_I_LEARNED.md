@@ -370,3 +370,21 @@
 - **Ánh xạ lỗi tiếng Việt nhất quán qua RFC 7807:**
   - Mọi lỗi từ API (`ENROLLMENT_DUPLICATE`, `ONE_ON_ONE_FULL`, `CLASS_TYPE_CHANGE_INVALID`, `CLASS_NOT_FOUND`) được bắt và hiển thị thông báo tiếng Việt thân thiện, rõ nghĩa theo đúng `errorMessages.ts`.
 
+---
+
+## Task: T3.1 — Migration `schedule_rules`, `sessions` & PostgreSQL EXCLUDE Constraint
+
+**Concepts & Database Design:**
+- **Giải pháp chống trùng lịch dạy bằng PostgreSQL Exclusion Constraint (`EXCLUDE USING gist`):**
+  - **Vấn đề Race Condition:** Nếu chỉ kiểm tra trùng buổi trong Spring Boot service bằng query `SELECT COUNT(*) WHERE tutor_id = ? AND start_at < ? AND end_at > ?`, khi hai request được gửi đồng thời (concurrency), cả hai transaction có thể cùng đọc ra kết quả `count = 0` và cùng chèn thành công bản ghi mới, dẫn đến tình trạng một gia sư bị xếp 2 buổi học trùng giờ nhau.
+  - **Bản chất của Exclusion Constraint:** Đây là sự tổng quát hóa của Unique Constraint trong PostgreSQL. Thay vì chỉ kiểm tra sự bằng nhau (`=`), Exclusion Constraint cho phép kiểm tra quan hệ giữa các dòng bằng bất kỳ toán tử index nào (ở đây là toán tử chồng lấn dải thời gian `&&`).
+  - **Extension `btree_gist`:** PostgreSQL mặc định chỉ hỗ trợ kiểu dữ liệu hình học hoặc dải (range) trong GIST index. Để kết hợp cột số nguyên thông thường (`tutor_id BIGINT`) với toán tử `=`, bắt buộc phải bật extension `CREATE EXTENSION IF NOT EXISTS btree_gist;`.
+  - **Dải thời gian nửa mở (`tstzrange(start_at, end_at, '[)')`):**
+    - Ký hiệu `'[)'` quy định: mốc `start_at` thuộc dải (inclusive `[`), còn `end_at` không thuộc dải (exclusive `)`).
+    - Điều này giải quyết bài toán nghiệp vụ kinh điển: Buổi 1 kết thúc lúc `10:00:00` và Buổi 2 bắt đầu lúc `10:00:00` là hai buổi **liền kề**, toán tử chồng lấn `&&` trả về `false`, không bị coi là xung đột.
+  - **Mệnh đề điều kiện `WHERE (status <> 'CANCELLED')`:**
+    - Giúp hệ thống hỗ trợ hủy buổi học (`CANCELLED`). Khi một buổi học đã bị hủy, exclusion constraint tự động bỏ qua bản ghi đó, cho phép gia sư tạo lại buổi dạy mới vào đúng khung giờ đó mà không vi phạm ràng buộc.
+- **Denormalization `tutor_id` trong bảng `sessions` (Quyết định D-11):**
+  - Trong mô hình chuẩn, `sessions` chỉ cần khóa ngoại trỏ tới `class_id` (vì lớp đã có `tutor_id`). Tuy nhiên, ràng buộc EXCLUDE của PostgreSQL chỉ có thể áp dụng trên các cột của **chính bảng đó**, không thể join sang bảng `classes`.
+  - Do đó, denormalize cột `tutor_id` vào `sessions` là sự đánh đổi cần thiết để trao toàn bộ trách nhiệm đảm bảo toàn vẹn dữ liệu cho tầng Database engine, bảo đảm an toàn 100% trước mọi race condition.
+

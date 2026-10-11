@@ -5,8 +5,13 @@ import java.util.List;
 
 public record GenerateSessionsResponse(
         int created,
-        List<SessionConflictItem> conflicts
+        List<SessionConflictItem> conflicts,
+        List<String> warnings
 ) {
+    public GenerateSessionsResponse(int created, List<SessionConflictItem> conflicts) {
+        this(created, conflicts, List.of());
+    }
+
     public record SessionConflictItem(
             LocalDate date,
             Long conflictingSessionId,

@@ -107,7 +107,7 @@ Mã cảnh báo (`alerts[].code`): `CYCLE_LOW` (đợt hiện tại còn ≤ 2 b
 ```
 → `201`
 ```json
-{ "id": 301, "classId": 12, "startAt": "2026-10-05T11:00:00Z", "endAt": "2026-10-05T12:30:00Z", "status": "SCHEDULED", "topic": "Hàm số mũ" }
+{ "id": 301, "classId": 12, "className": "Lớp Toán 12A", "startAt": "2026-10-05T11:00:00Z", "endAt": "2026-10-05T12:30:00Z", "status": "SCHEDULED", "topic": "Hàm số mũ", "warnings": [] }
 ```
 → `409`
 ```json

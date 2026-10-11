@@ -45,6 +45,7 @@ public class ScheduleRuleService {
     private final ScheduleRuleRepository scheduleRuleRepository;
     private final ClassRepository classRepository;
     private final SessionRepository sessionRepository;
+    private final com.tutorhub.classroom.repository.ClassEnrollmentRepository classEnrollmentRepository;
 
     /**
      * Tạo quy tắc lịch lặp cho lớp: POST /classes/{classId}/schedule-rules.
@@ -155,6 +156,13 @@ public class ScheduleRuleService {
         List<SessionConflictItem> conflicts = new ArrayList<>();
         Long tutorId = clazz.getTutor().getId();
 
+        List<String> warnings = new ArrayList<>();
+        List<com.tutorhub.classroom.entity.ClassEnrollment> enrollments =
+                classEnrollmentRepository.findByClazzIdAndStatusWithStudentOrderByEnrolledAtDesc(
+                        classId, com.tutorhub.classroom.entity.EnrollmentStatus.ACTIVE
+                );
+        List<Long> studentIds = enrollments.stream().map(e -> e.getStudent().getId()).toList();
+
         while (!currentDate.isAfter(request.to())) {
             // Kiểm tra thứ trong tuần (DayOfWeek: Monday=1, ..., Sunday=7)
             if (currentDate.getDayOfWeek().getValue() == rule.getDayOfWeek()) {
@@ -193,15 +201,35 @@ public class ScheduleRuleService {
                                 .topic(clazz.getName())
                                 .build();
 
-                        sessionRepository.save(newSession);
+                        SessionEntity savedSession = sessionRepository.save(newSession);
                         createdCount++;
+
+                        // Thu thập cảnh báo trùng lịch học sinh (nếu có)
+                        if (!studentIds.isEmpty()) {
+                            List<Object[]> studentConflicts = sessionRepository.findStudentOverlappingSessions(
+                                    studentIds, classId, startAt, endAt, savedSession.getId()
+                            );
+                            for (Object[] row : studentConflicts) {
+                                SessionEntity confSession = (SessionEntity) row[0];
+                                String studentName = (String) row[2];
+                                warnings.add(String.format(
+                                        "Ngày %s: Học sinh %s bị trùng lịch với buổi #%d (Lớp %s, %s–%s UTC).",
+                                        currentDate,
+                                        studentName,
+                                        confSession.getId(),
+                                        confSession.getClazz().getName(),
+                                        TIME_FORMATTER.format(confSession.getStartAt()),
+                                        TIME_FORMATTER.format(confSession.getEndAt())
+                                ));
+                            }
+                        }
                     }
                 }
             }
             currentDate = currentDate.plusDays(1);
         }
 
-        return new GenerateSessionsResponse(createdCount, conflicts);
+        return new GenerateSessionsResponse(createdCount, conflicts, warnings);
     }
 
     private ClassEntity findClassOrThrow(Long classId) {

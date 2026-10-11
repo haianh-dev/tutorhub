@@ -94,7 +94,8 @@ public class SessionService {
 
         try {
             SessionEntity saved = sessionRepository.saveAndFlush(entity);
-            return SessionResponse.from(saved);
+            List<String> warnings = findStudentConflictWarnings(clazz.getId(), request.startAt(), request.endAt(), saved.getId());
+            return SessionResponse.from(saved, warnings);
         } catch (DataIntegrityViolationException ex) {
             // Đề phòng trường hợp race condition lọt qua bước 1 và bị DB exclusion constraint chặn
             log.warn("Exclusion constraint caught during session creation: {}", ex.getMessage());
@@ -149,7 +150,8 @@ public class SessionService {
 
         try {
             SessionEntity updated = sessionRepository.saveAndFlush(session);
-            return SessionResponse.from(updated);
+            List<String> warnings = findStudentConflictWarnings(session.getClazz().getId(), newStartAt, newEndAt, updated.getId());
+            return SessionResponse.from(updated, warnings);
         } catch (DataIntegrityViolationException ex) {
             log.warn("Exclusion constraint caught during session update: {}", ex.getMessage());
             throw new SessionConflictException(
@@ -195,7 +197,10 @@ public class SessionService {
     public SessionResponse getSessionById(Long actorId, Role actorRole, Long sessionId) {
         SessionEntity session = findSessionOrThrow(sessionId);
         validateReadAccess(session.getClazz(), actorId, actorRole);
-        return SessionResponse.from(session);
+        List<String> warnings = findStudentConflictWarnings(
+                session.getClazz().getId(), session.getStartAt(), session.getEndAt(), session.getId()
+        );
+        return SessionResponse.from(session, warnings);
     }
 
     /**
@@ -344,5 +349,57 @@ public class SessionService {
                 endTimeStr
         );
         return new SessionConflictException(detail, conflict.getId());
+    }
+
+    /**
+     * Tìm các cảnh báo trùng lịch phía học sinh (FR-3.4 & T3.5 - không chặn):
+     * Lấy danh sách học sinh ACTIVE của lớp hiện tại, kiểm tra xem họ có bị trùng lịch
+     * với buổi học nào của các lớp khác (ACTIVE) hay không.
+     */
+    private List<String> findStudentConflictWarnings(
+            Long currentClassId,
+            Instant startAt,
+            Instant endAt,
+            Long excludeSessionId
+    ) {
+        List<com.tutorhub.classroom.entity.ClassEnrollment> enrollments =
+                classEnrollmentRepository.findByClazzIdAndStatusWithStudentOrderByEnrolledAtDesc(
+                        currentClassId, com.tutorhub.classroom.entity.EnrollmentStatus.ACTIVE
+                );
+        if (enrollments.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> studentIds = enrollments.stream()
+                .map(e -> e.getStudent().getId())
+                .toList();
+
+        List<Object[]> conflictRows = sessionRepository.findStudentOverlappingSessions(
+                studentIds, currentClassId, startAt, endAt, excludeSessionId
+        );
+
+        if (conflictRows.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> warnings = new java.util.ArrayList<>();
+        for (Object[] row : conflictRows) {
+            SessionEntity conflictingSession = (SessionEntity) row[0];
+            String studentName = (String) row[2];
+
+            String startStr = TIME_FORMATTER.format(conflictingSession.getStartAt());
+            String endStr = TIME_FORMATTER.format(conflictingSession.getEndAt());
+
+            String warningMsg = String.format(
+                    "Học sinh %s bị trùng lịch với buổi #%d (Lớp %s, %s–%s UTC).",
+                    studentName,
+                    conflictingSession.getId(),
+                    conflictingSession.getClazz().getName(),
+                    startStr,
+                    endStr
+            );
+            warnings.add(warningMsg);
+        }
+        return warnings;
     }
 }

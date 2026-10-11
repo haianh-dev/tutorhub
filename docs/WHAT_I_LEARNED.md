@@ -445,5 +445,31 @@
     5. Nếu không xung đột: Lưu buổi mới (`SessionEntity`) với `status = SCHEDULED`.
   - Kết quả trả về cho client: `{ created: n, conflicts: [ { date, conflictingSessionId, reason } ] }`. Gia sư vừa có được các buổi học hợp lệ, vừa nắm được chính xác các ngày cần xử lý/dời giờ.
 
+---
+
+## Task: T3.5 — Cảnh báo Trùng lịch phía Học sinh (Non-blocking Warnings)
+
+**Concepts & Implementation Patterns:**
+- **Sự khác biệt giữa Ràng buộc Cứng (Hard Conflict) và Cảnh báo Mềm (Soft Warning):**
+  - **Gia sư (Hard Conflict):** Một gia sư không thể xuất hiện ở hai nơi cùng một lúc. Do đó việc trùng lịch của gia sư là lỗi toàn vẹn dữ liệu nghiêm trọng, được kiểm soát ở mức cơ sở dữ liệu (PostgreSQL Exclusion Constraint) và ném lỗi `409 SESSION_CONFLICT`.
+  - **Học sinh (Soft Warning - FR-3.4):** Một học sinh có thể học cùng lúc nhiều môn (hoặc với nhiều gia sư khác nhau). Khi 2 lớp học của cùng một học sinh diễn ra trùng giờ, hệ thống **không được chặn** tạo buổi học (để không làm gián đoạn lớp học của cả tập thể), mà chỉ trả về cảnh báo mềm trong trường `warnings` để gia sư biết và thông báo cho phụ huynh/học sinh.
+- **Tối ưu hóa câu truy vấn phát hiện trùng lịch tập thể (`findStudentOverlappingSessions`):**
+  - Thay vì lặp qua từng học sinh và gửi `N` câu truy vấn (lỗi N+1 query), repository sử dụng một truy vấn duy nhất với toán tử `IN :studentIds` kết hợp `JOIN ClassEnrollment`:
+    ```sql
+    WHERE e.student.id IN :studentIds
+      AND e.status = 'ACTIVE'
+      AND s.status <> 'CANCELLED'
+      AND c.id <> :excludeClassId
+      AND s.startAt < :endAt AND s.endAt > :startAt
+    ```
+  - **Điều kiện loại trừ chính xác:**
+    - Chỉ xét học sinh đang có ghi danh hoạt động (`status = 'ACTIVE'`); học sinh đã nghỉ (`LEFT`) không sinh cảnh báo.
+    - Chỉ xét các buổi học không bị hủy (`status <> 'CANCELLED'`).
+    - Bỏ qua các buổi thuộc cùng lớp học hiện tại (`c.id <> :excludeClassId`) và bỏ qua chính buổi học đang xét (`s.id <> :excludeSessionId`).
+- **Thiết kế DTO mở rộng nhất quán:**
+  - `SessionResponse` bổ sung `List<String> warnings`, đảm bảo backward compatibility bằng overload `from(entity)` và `from(entity, warnings)`.
+  - Giao diện frontend chỉ cần render khối thông báo cảnh báo màu vàng khi `warnings.length > 0` mà không ảnh hưởng tới luồng tạo buổi học thành công.
+
+
 
 

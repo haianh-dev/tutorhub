@@ -470,6 +470,24 @@
   - `SessionResponse` bổ sung `List<String> warnings`, đảm bảo backward compatibility bằng overload `from(entity)` và `from(entity, warnings)`.
   - Giao diện frontend chỉ cần render khối thông báo cảnh báo màu vàng khi `warnings.length > 0` mà không ảnh hưởng tới luồng tạo buổi học thành công.
 
+---
+
+## Task: T3.6 — Giao diện Lịch học (Tuần/Tháng), Quản lý Buổi & Xử lý Trùng lịch (Frontend)
+
+**Concepts & UI/UX Patterns:**
+- **Neubrutalism Calendar Layout (Thiết kế Lịch theo phong cách Đậm nét):**
+  - **Lịch Tuần (Week View):** Chia thành 7 cột tương ứng Thứ 2 đến Chủ Nhật, hiển thị nổi bật ngày hiện tại (`bg-yellow/15`), cho phép thêm buổi học nhanh tại từng ngày (+ Thêm). Các buổi học hiển thị dưới dạng pop card với viền 2px, phân biệt rõ trạng thái: `SCHEDULED` (vàng), `COMPLETED` (xanh lá), `CANCELLED` (xám gạch ngang).
+  - **Lịch Tháng (Month View):** Lưới lịch tháng kinh điển với padding ngày đầu tháng và hiển thị tối đa 3 buổi đầu kèm chỉ số `+N buổi khác` khi ngày có nhiều buổi.
+- **Tương tác và Điều hướng Công thái học:**
+  - Hỗ trợ chuyển đổi tức thì giữa chế độ xem Tuần và Tháng (`viewMode`).
+  - Nút điều hướng nhanh: Trước (`<`), Sau (`>`), và Hôm nay (`Today`).
+  - Bộ lọc dropdown theo từng lớp học cụ thể hoặc xem toàn bộ lịch tổng hợp của gia sư.
+- **Xử lý Xung đột và Phản hồi Thông minh từ Backend:**
+  - Khi tạo/sửa buổi học gặp lỗi trùng lịch gia sư (`409 SESSION_CONFLICT`): Bắt trích xuất `conflictingSessionId` từ `ApiProblemDetail`, hiển thị khối Alert lỗi màu san hô (`bg-coral`) kèm thông điệp rõ ràng từ backend và mã buổi học xung đột.
+  - Khi buổi học có cảnh báo học sinh trùng lịch (`warnings.length > 0`): Giao diện hiển thị Alert cảnh báo màu vàng ngữ nghĩa liệt kê danh sách học sinh bị trùng giờ với lớp khác, đồng thời thông báo rõ buổi học vẫn được lưu vào hệ thống bình thường.
+  - Tích hợp Modal sinh lịch hàng loạt từ quy tắc lặp (`GenerateSessionsModal`): Báo cáo trực quan số lượng buổi đã tạo thành công và danh sách chi tiết các ngày bị bỏ qua do trùng giờ gia sư.
+
+
 
 
 

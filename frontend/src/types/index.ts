@@ -137,12 +137,66 @@ export type SessionStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 export interface Session {
   id: number;
   classId: number;
+  className?: string;
   tutorId: number;
+  ruleId?: number;
   startAt: string;
   endAt: string;
   status: SessionStatus;
   topic?: string;
   note?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  warnings?: string[];
+}
+
+export interface CreateSessionRequest {
+  startAt: string;
+  endAt: string;
+  topic?: string;
+  note?: string;
+}
+
+export interface UpdateSessionRequest {
+  startAt?: string;
+  endAt?: string;
+  topic?: string;
+  note?: string;
+}
+
+export interface ScheduleRule {
+  id: number;
+  classId: number;
+  dayOfWeek: number; // 1 (Mon) - 7 (Sun)
+  startTime: string; // HH:mm:ss
+  endTime: string;
+  effectiveFrom: string; // YYYY-MM-DD
+  effectiveTo?: string;
+}
+
+export interface CreateScheduleRuleRequest {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  effectiveFrom: string;
+  effectiveTo?: string;
+}
+
+export interface GenerateSessionsRequest {
+  from: string;
+  to: string;
+}
+
+export interface SessionConflictItem {
+  date: string;
+  conflictingSessionId?: number;
+  reason: string;
+}
+
+export interface GenerateSessionsResponse {
+  created: number;
+  conflicts: SessionConflictItem[];
+  warnings?: string[];
 }
 
 export type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT_EXCUSED' | 'ABSENT_UNEXCUSED';
@@ -183,5 +237,6 @@ export interface ApiProblemDetail {
   instance?: string;
   code?: string;
   timestamp?: string;
+  conflictingSessionId?: number;
   errors?: ApiFieldError[];
 }

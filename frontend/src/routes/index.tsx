@@ -15,6 +15,7 @@ import AppLayout from '../components/layout/AppLayout';
 import DashboardPage from '../features/dashboard/DashboardPage';
 import ClassesListPage from '../features/classes/ClassesListPage';
 import ClassDetailPage from '../features/classes/ClassDetailPage';
+import SchedulePage from '../features/schedule/SchedulePage';
 import PlaceholderPage from '../components/PlaceholderPage';
 import DevUiPage from '../features/dev/DevUiPage';
 import LoginPage from '../features/auth/pages/LoginPage';
@@ -234,13 +235,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'schedule',
-            element: (
-              <PlaceholderPage
-                title="Lịch dạy & Chống trùng buổi"
-                description="Xem lịch dạy theo tuần/tháng, tạo buổi học tự động từ quy tắc tuần, bảo đảm chống trùng giờ bằng DB exclusion."
-                phase="Phase 3 (T3.1 - T3.6)"
-              />
-            ),
+            element: <SchedulePage />,
           },
           {
             path: 'attendance',

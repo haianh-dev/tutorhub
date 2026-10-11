@@ -98,12 +98,6 @@ public class SessionService {
         } catch (DataIntegrityViolationException ex) {
             // Đề phòng trường hợp race condition lọt qua bước 1 và bị DB exclusion constraint chặn
             log.warn("Exclusion constraint caught during session creation: {}", ex.getMessage());
-            List<SessionEntity> lateConflicts = sessionRepository.findOverlappingSessions(
-                    tutorId, request.startAt(), request.endAt(), null
-            );
-            if (!lateConflicts.isEmpty()) {
-                throw buildConflictException(lateConflicts.get(0));
-            }
             throw new SessionConflictException(
                     "Buổi học trùng thời gian với buổi khác của gia sư.", null
             );
@@ -158,12 +152,6 @@ public class SessionService {
             return SessionResponse.from(updated);
         } catch (DataIntegrityViolationException ex) {
             log.warn("Exclusion constraint caught during session update: {}", ex.getMessage());
-            List<SessionEntity> lateConflicts = sessionRepository.findOverlappingSessions(
-                    session.getTutor().getId(), newStartAt, newEndAt, session.getId()
-            );
-            if (!lateConflicts.isEmpty()) {
-                throw buildConflictException(lateConflicts.get(0));
-            }
             throw new SessionConflictException(
                     "Buổi học trùng thời gian với buổi khác của gia sư.", null
             );

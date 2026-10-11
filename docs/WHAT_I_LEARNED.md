@@ -409,3 +409,22 @@
   - `PARENT`: Chỉ xem được các buổi của lớp mà con mình (đã xác thực qua bảng `parent_students`) đang theo học.
   - `ADMIN`: Có quyền xem lịch của mọi lớp/mọi gia sư mà không bị giới hạn ownership.
 
+---
+
+## Task: T3.3 — Kiểm thử Đồng thời (Concurrency Test) & Xử lý Transaction Rollback khi vi phạm Exclusion Constraint
+
+**Concepts & Testing Patterns:**
+- **Thiết kế Concurrency Test chuẩn xác với `CountDownLatch` đôi:**
+  - Để mô phỏng chính xác 2 request HTTP gửi đến máy chủ tại cùng một thời điểm vi mô (microsecond level), chỉ khởi tạo thread pool là chưa đủ vì các thread khởi động lệch nhau.
+  - Sử dụng mô hình 2 chốt chặn:
+    1. `readyLatch` (khởi tạo với `N` thread): Mỗi worker thread chuẩn bị xong dữ liệu và gọi `readyLatch.countDown()`, sau đó chờ tại `startLatch.await()`.
+    2. Main thread chờ `readyLatch.await()`. Khi cả 2 thread đều đã sẵn sàng đứng trước vạch xuất phát, main thread kích hoạt `startLatch.countDown()`. Cả 2 request `POST /classes/{id}/sessions` cùng ập vào DispatcherServlet và database đồng thời.
+- **Hiện tượng Hibernate Session bị vỡ (Broken Persistence Context) khi gặp DB Constraint Violation:**
+  - Khi một câu lệnh SQL INSERT/UPDATE vi phạm DB constraint (Exclusion Constraint, Unique Key), PostgreSQL trả về lỗi `SQLState 23P01` hoặc `23505`. Driver JDBC đẩy lỗi này lên và Hibernate/JPA đánh dấu Session hiện tại là "rollback-only" / uncommitted.
+  - **Lỗi phổ biến:** Trong khối `catch (DataIntegrityViolationException ex)` ở tầng Service, nếu tiếp tục gọi `sessionRepository.findOverlappingSessions(...)` để tìm kiếm thông tin buổi gây xung đột, Hibernate sẽ cố gắng auto-flush Session bị hỏng trước khi thực thi query mới, dẫn đến lỗi nghiêm trọng: `org.hibernate.AssertionFailure: Entry for instance of 'SessionEntity' has a null identifier`.
+  - **Bài học thiết kế:**
+    - Tuyệt đối không tái sử dụng Hibernate Session để chạy câu query mới sau khi câu lệnh flush vừa văng ngoại lệ `DataIntegrityViolationException`.
+    - Phải ném ngay `SessionConflictException` trong khối `catch` để Spring Transaction Interceptor thực hiện rollback transaction sạch sẽ.
+    - Kết quả kiểm thử thực tế: Đúng 1 request thành công trả về `201 Created`, request còn lại thất bại nhận `409 SESSION_CONFLICT` (với problem detail RFC 7807) và trong PostgreSQL chỉ có đúng 1 bản ghi duy nhất được lưu.
+
+

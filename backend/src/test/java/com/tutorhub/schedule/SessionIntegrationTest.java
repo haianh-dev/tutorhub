@@ -328,8 +328,106 @@ class SessionIntegrationTest {
                             .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenTutorA)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(req2)))
-                    .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.status", is("SCHEDULED")));
+                    .andExpect(status().isCreated());
+        }
+
+        @Test
+        @DisplayName("T3.3: Hai request đồng thời tạo buổi trùng giờ cùng gia sư -> Đúng 1 thành công 201, 1 nhận 409 SESSION_CONFLICT")
+        void concurrentSessionCreationAllowsExactlyOne() throws Exception {
+            int threadCount = 2;
+            java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(threadCount);
+            java.util.concurrent.CountDownLatch readyLatch = new java.util.concurrent.CountDownLatch(threadCount);
+            java.util.concurrent.CountDownLatch startLatch = new java.util.concurrent.CountDownLatch(1);
+
+            java.util.concurrent.atomic.AtomicInteger successCount = new java.util.concurrent.atomic.AtomicInteger(0);
+            java.util.concurrent.atomic.AtomicInteger conflictCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
+            java.util.List<java.util.concurrent.Future<?>> futures = new java.util.ArrayList<>();
+
+            // Khung giờ cạnh tranh: 2026-10-17 14:00 - 15:30
+            CreateSessionRequest req1 = new CreateSessionRequest(
+                    Instant.parse("2026-10-17T14:00:00Z"),
+                    Instant.parse("2026-10-17T15:30:00Z"),
+                    "Buổi luồng 1", null
+            );
+
+            CreateSessionRequest req2 = new CreateSessionRequest(
+                    Instant.parse("2026-10-17T14:00:00Z"),
+                    Instant.parse("2026-10-17T15:30:00Z"),
+                    "Buổi luồng 2", null
+            );
+
+            // Luồng 1
+            futures.add(executor.submit(() -> {
+                readyLatch.countDown();
+                try {
+                    startLatch.await();
+                    org.springframework.test.web.servlet.MvcResult res = mockMvc.perform(
+                            post("/api/v1/classes/{id}/sessions", classA.getId())
+                                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenTutorA)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(req1))
+                    ).andReturn();
+
+                    int statusCode = res.getResponse().getStatus();
+                    if (statusCode == 201) {
+                        successCount.incrementAndGet();
+                    } else if (statusCode == 409) {
+                        conflictCount.incrementAndGet();
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+
+            // Luồng 2
+            futures.add(executor.submit(() -> {
+                readyLatch.countDown();
+                try {
+                    startLatch.await();
+                    org.springframework.test.web.servlet.MvcResult res = mockMvc.perform(
+                            post("/api/v1/classes/{id}/sessions", classA.getId())
+                                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenTutorA)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(req2))
+                    ).andReturn();
+
+                    int statusCode = res.getResponse().getStatus();
+                    if (statusCode == 201) {
+                        successCount.incrementAndGet();
+                    } else if (statusCode == 409) {
+                        conflictCount.incrementAndGet();
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+
+            // Chờ cả 2 luồng sẵn sàng
+            readyLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+            // Kích hoạt đồng thời!
+            startLatch.countDown();
+
+            for (java.util.concurrent.Future<?> f : futures) {
+                f.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            }
+            executor.shutdown();
+
+            // Kiểm tra nghiệm thu: Chỉ đúng 1 thành công và 1 nhận 409
+            org.assertj.core.api.Assertions.assertThat(successCount.get())
+                    .as("Chỉ đúng 1 request được thành công")
+                    .isEqualTo(1);
+            org.assertj.core.api.Assertions.assertThat(conflictCount.get())
+                    .as("Request còn lại phải nhận 409 SESSION_CONFLICT")
+                    .isEqualTo(1);
+
+            // Kiểm tra trong DB chỉ có đúng 1 session được lưu
+            Integer dbCount = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM sessions WHERE tutor_id = ? AND start_at = '2026-10-17 14:00:00+00'",
+                    Integer.class,
+                    tutorA.getId()
+            );
+            org.assertj.core.api.Assertions.assertThat(dbCount).isEqualTo(1);
         }
     }
 

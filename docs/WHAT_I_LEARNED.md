@@ -427,4 +427,23 @@
     - Phải ném ngay `SessionConflictException` trong khối `catch` để Spring Transaction Interceptor thực hiện rollback transaction sạch sẽ.
     - Kết quả kiểm thử thực tế: Đúng 1 request thành công trả về `201 Created`, request còn lại thất bại nhận `409 SESSION_CONFLICT` (với problem detail RFC 7807) và trong PostgreSQL chỉ có đúng 1 bản ghi duy nhất được lưu.
 
+---
+
+## Task: T3.4 — Quy tắc Lịch lặp (`schedule_rules`) & Thuật toán Sinh Buổi học Báo cáo Xung đột
+
+**Concepts & Architecture:**
+- **Mô hình Quy tắc Lịch lặp (Schedule Rule Engine):**
+  - Thay vì gia sư phải tạo thủ công từng buổi học đơn lẻ trong cả tháng/học kỳ, hệ thống cung cấp thực thể `schedule_rules` đại diện cho lịch cố định hàng tuần: `dayOfWeek` (1 = Thứ Hai ... 7 = Chủ Nhật theo ISO-8601), `startTime`, `endTime`, `effectiveFrom`, `effectiveTo`.
+  - Khóa ngoại `rule_id` trong bảng `sessions` lưu vết nguồn gốc sinh ra buổi học (`ON DELETE SET NULL`), giúp hệ thống phân biệt được buổi sinh tự động và buổi tạo đơn lẻ.
+- **Thuật toán sinh buổi không làm gián đoạn (Non-blocking Batch Generation with Conflict Reporting):**
+  - **Bài toán:** Khi sinh lịch cho cả tháng (ví dụ 10 buổi), nếu 1 buổi bị trùng với lịch dạy khác của gia sư, ta không nên hủy bỏ (`abort`) toàn bộ 9 buổi còn lại.
+  - **Cách tiếp cận:**
+    1. Lặp qua từng ngày trong khoảng `[from, to]` khớp với `dayOfWeek` và nằm trong khoảng hiệu lực của rule.
+    2. Chuyển đổi ngày và giờ sang mốc `Instant` UTC (`startAt`, `endAt`).
+    3. Kiểm tra trùng bằng `sessionRepository.findOverlappingSessions`.
+    4. Nếu phát hiện xung đột: Không ném exception, mà ghi nhận vào danh sách `conflicts` kèm `conflictingSessionId` và chi tiết lớp/giờ bị trùng.
+    5. Nếu không xung đột: Lưu buổi mới (`SessionEntity`) với `status = SCHEDULED`.
+  - Kết quả trả về cho client: `{ created: n, conflicts: [ { date, conflictingSessionId, reason } ] }`. Gia sư vừa có được các buổi học hợp lệ, vừa nắm được chính xác các ngày cần xử lý/dời giờ.
+
+
 

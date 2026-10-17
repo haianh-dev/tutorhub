@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Edit2, X, Users, UserCheck } from 'lucide-react';
 import { Input } from '../../../components/ui/Input';
@@ -29,9 +29,9 @@ export const EditClassModal: React.FC<EditClassModalProps> = ({
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     reset,
+    control,
     formState: { errors },
   } = useForm<UpdateClassFormValues>({
     resolver: zodResolver(updateClassSchema),
@@ -51,11 +51,10 @@ export const EditClassModal: React.FC<EditClassModalProps> = ({
         classType: classroom.classType,
         description: classroom.description ?? '',
       });
-      setErrorMessage(null);
     }
   }, [isOpen, classroom, reset]);
 
-  const selectedType = watch('classType');
+  const selectedType = useWatch({ control, name: 'classType' });
   const activeStudentCount = classroom.studentCount ?? 0;
 
   const updateMutation = useUpdateClassMutation({

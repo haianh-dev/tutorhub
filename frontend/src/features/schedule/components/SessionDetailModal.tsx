@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { X, Calendar, Clock, CheckCircle2, Ban, Edit3, AlertCircle, AlertTriangle } from 'lucide-react';
+import { X, Calendar, Clock, CheckCircle2, Ban, Edit3, AlertCircle, AlertTriangle, UserCheck } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { Alert } from '../../../components/ui/Alert';
 import { useUpdateSession, useCompleteSession, useCancelSession } from '../api';
 import { extractScheduleError } from '../errorMessages';
+import { AttendanceModal } from '../../attendance/components/AttendanceModal';
 import type { Session } from '../../../types';
 
 interface SessionDetailModalProps {
@@ -30,13 +31,16 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
   onSuccess,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [conflictingId, setConflictingId] = useState<number | undefined>();
 
   // Format dates/times
-  const startDate = useMemo(() => session ? new Date(session.startAt) : new Date(0), [session?.startAt]);
-  const endDate = useMemo(() => session ? new Date(session.endAt) : new Date(0), [session?.endAt]);
+  const { startDate, endDate } = useMemo(() => ({
+    startDate: session ? new Date(session.startAt) : new Date(0),
+    endDate: session ? new Date(session.endAt) : new Date(0),
+  }), [session]);
 
   const pad = (n: number) => n.toString().padStart(2, '0');
   const dateStr = `${startDate.getUTCFullYear()}-${pad(startDate.getUTCMonth() + 1)}-${pad(startDate.getUTCDate())}`;
@@ -251,7 +255,17 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
 
             {/* Actions */}
             <div className="pt-4 border-t-2 border-ink flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {!isCancelled && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAttendanceOpen(true)}
+                    className="px-3 py-1.5 bg-emerald-400 text-ink border-2 border-ink font-heading font-bold uppercase tracking-wider text-xs hover:bg-emerald-300 transition-colors flex items-center gap-1.5 shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                  >
+                    <UserCheck className="w-4 h-4" />
+                    Điểm danh
+                  </button>
+                )}
                 {!isCancelled && !isCompleted && (
                   <>
                     <Button
@@ -359,6 +373,15 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
           </form>
         )}
       </div>
+
+      <AttendanceModal
+        isOpen={isAttendanceOpen}
+        onClose={() => setIsAttendanceOpen(false)}
+        session={session}
+        onSuccess={() => {
+          onSuccess?.();
+        }}
+      />
     </div>
   );
 };

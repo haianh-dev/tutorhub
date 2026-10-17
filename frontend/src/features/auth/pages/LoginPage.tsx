@@ -8,7 +8,7 @@ import { Button } from '../../../components/ui/Button';
 import { Alert } from '../../../components/ui/Alert';
 import AuthCard from '../components/AuthCard';
 import EyeToggle from '../components/EyeToggle';
-import { useAuth } from '../AuthContext';
+import { useAuth } from '../useAuth';
 import { useLoginMutation } from '../api';
 import {
   extractAlertMessage,

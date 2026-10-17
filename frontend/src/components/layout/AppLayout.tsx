@@ -12,7 +12,7 @@ import {
   GraduationCap,
   LogOut,
 } from 'lucide-react';
-import { useAuth } from '../../features/auth/AuthContext';
+import { useAuth } from '../../features/auth/useAuth';
 import { Badge } from '../ui/Badge';
 
 const navigation = [

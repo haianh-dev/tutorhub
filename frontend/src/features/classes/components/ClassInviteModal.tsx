@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Share2, Copy, Check, X, Link as LinkIcon, UserPlus } from 'lucide-react';
 import { Input } from '../../../components/ui/Input';
@@ -36,9 +36,9 @@ export const ClassInviteModal: React.FC<ClassInviteModalProps> = ({
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     reset,
+    control,
     formState: { errors },
   } = useForm<CreateClassInvitationFormValues>({
     resolver: zodResolver(createClassInvitationSchema),
@@ -49,7 +49,7 @@ export const ClassInviteModal: React.FC<ClassInviteModalProps> = ({
     },
   });
 
-  const selectedRole = watch('role');
+  const selectedRole = useWatch({ control, name: 'role' });
 
   const inviteMutation = useCreateInvitationMutation({
     onSuccess: (data) => {

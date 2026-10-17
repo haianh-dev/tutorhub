@@ -5,6 +5,7 @@ import { Button } from '../../../components/ui/Button';
 import { Alert } from '../../../components/ui/Alert';
 import { useCreateSession } from '../api';
 import { extractScheduleError } from '../errorMessages';
+import { getTodayDateString } from '../dateUtils';
 import type { Classroom } from '../../../types';
 
 interface CreateSessionModalProps {
@@ -37,7 +38,7 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
   const [warnings, setWarnings] = useState<string[]>([]);
   const [conflictingId, setConflictingId] = useState<number | undefined>();
 
-  const defaultDate = useMemo(() => initialDate || new Date().toISOString().split('T')[0], [initialDate]);
+  const defaultDate = initialDate || getTodayDateString();
   const defaultClassId = initialClassId || (classes[0]?.id ?? 0);
 
   const {

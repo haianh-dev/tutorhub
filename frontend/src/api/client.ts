@@ -6,7 +6,7 @@ import axios, {
 import {
   forceClearAuth,
   refreshTokensStandalone,
-} from '../features/auth/AuthContext';
+} from '../features/auth/authUtils';
 import type { ApiProblemDetail } from '../types';
 
 export interface RetryableConfig extends InternalAxiosRequestConfig {

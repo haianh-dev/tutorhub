@@ -18,7 +18,7 @@ import { Badge } from '../../../components/ui/Badge';
 import AuthCard from '../components/AuthCard';
 import EyeToggle from '../components/EyeToggle';
 import { useAcceptInvitationMutation, useInvitationQuery } from '../api';
-import { useAuth } from '../AuthContext';
+import { useAuth } from '../useAuth';
 import {
   extractAlertMessage,
   extractFieldErrors,

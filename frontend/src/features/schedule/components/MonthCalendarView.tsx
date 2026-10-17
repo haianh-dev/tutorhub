@@ -1,4 +1,5 @@
 import React from 'react';
+import { getTodayDateString } from '../dateUtils';
 import type { Session } from '../../../types';
 
 interface MonthCalendarViewProps {
@@ -57,7 +58,7 @@ export const MonthCalendarView: React.FC<MonthCalendarViewProps> = ({
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const dayNum = i + 1;
           const dateStr = `${year}-${pad(month + 1)}-${pad(dayNum)}`;
-          const isToday = new Date().toISOString().split('T')[0] === dateStr;
+          const isToday = getTodayDateString() === dateStr;
 
           // Buổi học trong ngày
           const daySessions = sessions.filter((s) => s.startAt.startsWith(dateStr));

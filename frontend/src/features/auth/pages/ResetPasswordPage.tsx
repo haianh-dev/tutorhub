@@ -13,7 +13,7 @@ import { Alert } from '../../../components/ui/Alert';
 import AuthCard from '../components/AuthCard';
 import EyeToggle from '../components/EyeToggle';
 import { useResetPasswordMutation } from '../api';
-import { useAuth } from '../AuthContext';
+import { useAuth } from '../useAuth';
 import {
   extractAlertMessage,
   extractFieldErrors,

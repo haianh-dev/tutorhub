@@ -1,5 +1,6 @@
 import React from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
+import { getTodayDateString } from '../dateUtils';
 import type { Session } from '../../../types';
 
 interface WeekCalendarViewProps {
@@ -33,8 +34,7 @@ export const WeekCalendarView: React.FC<WeekCalendarViewProps> = ({
       dateStr,
       dayNumber: d.getUTCDate(),
       month: d.getUTCMonth() + 1,
-      isToday:
-        new Date().toISOString().split('T')[0] === dateStr,
+      isToday: getTodayDateString() === dateStr,
     };
   });
 

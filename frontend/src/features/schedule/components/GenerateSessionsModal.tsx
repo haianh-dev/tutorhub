@@ -10,6 +10,7 @@ import {
   useGenerateSessions,
 } from '../api';
 import { extractScheduleError } from '../errorMessages';
+import { getTodayDateString, getInDaysDateString } from '../dateUtils';
 import type { Classroom, GenerateSessionsResponse } from '../../../types';
 
 interface GenerateSessionsModalProps {
@@ -47,6 +48,9 @@ export const GenerateSessionsModal: React.FC<GenerateSessionsModalProps> = ({
   // Queries
   const { data: rules = [], isLoading: isLoadingRules } = useScheduleRules(selectedClassId);
 
+  const todayStr = getTodayDateString();
+  const in30DaysStr = getInDaysDateString(30);
+
   // Form tạo Rule mới
   const {
     register: registerRule,
@@ -57,7 +61,7 @@ export const GenerateSessionsModal: React.FC<GenerateSessionsModalProps> = ({
       dayOfWeek: 1,
       startTime: '08:00',
       endTime: '09:30',
-      effectiveFrom: new Date().toISOString().split('T')[0],
+      effectiveFrom: todayStr,
       effectiveTo: '',
     },
   });
@@ -69,8 +73,8 @@ export const GenerateSessionsModal: React.FC<GenerateSessionsModalProps> = ({
   } = useForm({
     defaultValues: {
       ruleId: 0,
-      from: new Date().toISOString().split('T')[0],
-      to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 ngày sau
+      from: todayStr,
+      to: in30DaysStr,
     },
   });
 

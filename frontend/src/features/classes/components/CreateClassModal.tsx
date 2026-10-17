@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, X, Users, UserCheck } from 'lucide-react';
 import { Input } from '../../../components/ui/Input';
@@ -28,9 +28,9 @@ export const CreateClassModal: React.FC<CreateClassModalProps> = ({
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     reset,
+    control,
     formState: { errors },
   } = useForm<CreateClassFormValues>({
     resolver: zodResolver(createClassSchema),
@@ -42,7 +42,7 @@ export const CreateClassModal: React.FC<CreateClassModalProps> = ({
     },
   });
 
-  const selectedType = watch('classType');
+  const selectedType = useWatch({ control, name: 'classType' });
 
   const createMutation = useCreateClassMutation({
     onSuccess: () => {

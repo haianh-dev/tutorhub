@@ -1,16 +1,8 @@
-import React from 'react';
 import {
   createBrowserRouter,
-  Navigate,
   Outlet,
-  useLocation,
 } from 'react-router-dom';
-import {
-  AuthProvider,
-  getDefaultHomeRoute,
-  useAuth,
-} from '../features/auth/AuthContext';
-import type { Role } from '../types';
+import { AuthProvider } from '../features/auth/AuthContext';
 import AppLayout from '../components/layout/AppLayout';
 import DashboardPage from '../features/dashboard/DashboardPage';
 import ClassesListPage from '../features/classes/ClassesListPage';
@@ -22,143 +14,8 @@ import LoginPage from '../features/auth/pages/LoginPage';
 import RegisterTutorPage from '../features/auth/pages/RegisterTutorPage';
 import AcceptInvitationPage from '../features/auth/pages/AcceptInvitationPage';
 import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
-import { Alert } from '../components/ui/Alert';
-import { Button } from '../components/ui/Button';
-import { Link } from 'react-router-dom';
-import { Shield, ArrowLeft, Home } from 'lucide-react';
-
-/* ========================= ROUTE GUARDS ========================= */
-
-/**
- * Chỉ khách (chưa đăng nhập) mới truy cập được (login, register, invitation, reset password).
- * Nếu đã đăng nhập → redirect về trang mặc định theo role.
- */
-const GuestOnly: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, user, isInitialized } = useAuth();
-  const location = useLocation();
-
-  if (!isInitialized) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center font-body">
-        <div className="border-3 border-ink bg-paper brut-box p-6 text-ink font-heading font-bold uppercase text-xs">
-          Đang tải…
-        </div>
-      </div>
-    );
-  }
-
-  if (isAuthenticated && user) {
-    const from = (location.state as { from?: string } | null)?.from;
-    const to = from ?? getDefaultHomeRoute(user.role);
-    return <Navigate to={to} replace />;
-  }
-
-  return <>{children}</>;
-};
-
-/**
- * Yêu cầu đăng nhập, và (tùy chọn) phải có role trong danh sách `allowedRoles`.
- * - Chưa đăng nhập → redirect /login?returnUrl=...
- * - Đăng nhập rồi nhưng sai role → redirect /unauthorized
- */
-const RoleGuard: React.FC<{
-  allowedRoles: readonly Role[];
-  children: React.ReactNode;
-}> = ({ allowedRoles, children }) => {
-  const { isAuthenticated, user, isInitialized, hasRole } = useAuth();
-  const location = useLocation();
-
-  if (!isInitialized) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center font-body">
-        <div className="border-3 border-ink bg-paper brut-box p-6 text-ink font-heading font-bold uppercase text-xs">
-          Đang tải…
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || !user) {
-    const returnUrl = encodeURIComponent(
-      location.pathname + location.search,
-    );
-    return (
-      <Navigate
-        to={`/login?returnUrl=${returnUrl}`}
-        replace
-        state={{ from: location.pathname }}
-      />
-    );
-  }
-
-  if (!hasRole(allowedRoles)) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  return <>{children}</>;
-};
-
-const UnauthorizedPage: React.FC = () => {
-  const { user, getHomeRoute } = useAuth();
-  return (
-    <div className="min-h-screen bg-cream text-ink font-body flex items-center justify-center p-6">
-      <div className="w-full max-w-lg space-y-6">
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <div className="w-14 h-14 border-3 border-ink bg-coral brut-box flex items-center justify-center text-ink">
-            <Shield className="w-7 h-7" strokeWidth={2.5} />
-          </div>
-          <h1 className="font-heading font-black text-4xl uppercase tracking-wider">
-            403
-          </h1>
-        </div>
-
-        <Alert variant="error" title="Không đủ quyền">
-          <p className="leading-relaxed">
-            Tài khoản hiện tại ({user?.role ?? 'chưa đăng nhập'}) không có
-            quyền truy cập trang này.
-          </p>
-          <p className="leading-relaxed mt-2 text-ink/85">
-            Bạn hãy quay lại trang phù hợp với vai trò của mình.
-          </p>
-        </Alert>
-
-        <div className="flex flex-wrap gap-3 justify-center">
-          <Button
-            variant="secondary"
-            onClick={() => window.history.back()}
-            className="justify-center"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Quay lại
-          </Button>
-          <Link to={user ? getHomeRoute() : '/login'}>
-            <Button variant="primary" className="justify-center">
-              <Home className="w-4 h-4" />
-              {user ? 'Về trang chủ' : 'Đăng nhập'}
-            </Button>
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const NotFoundPage: React.FC = () => (
-  <div className="min-h-screen bg-cream text-ink font-body flex items-center justify-center p-6">
-    <div className="w-full max-w-md text-center space-y-4">
-      <h1 className="text-7xl font-heading font-black tracking-wider">404</h1>
-      <p className="font-body text-ink/80 text-base">
-        Trang bạn tìm kiếm không tồn tại.
-      </p>
-      <Link to="/">
-        <Button variant="primary">
-          <Home className="w-4 h-4" />
-          Về trang chủ
-        </Button>
-      </Link>
-    </div>
-  </div>
-);
+import { GuestOnly, RoleGuard } from './RouteGuards';
+import { UnauthorizedPage, NotFoundPage } from './ErrorPages';
 
 export const router = createBrowserRouter([
   {

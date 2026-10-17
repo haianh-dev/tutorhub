@@ -33,6 +33,7 @@ public enum ErrorCode {
     CLASS_TYPE_CHANGE_INVALID(422, "Cannot change class type due to active enrollment count"),
     CYCLE_INVALID(422, "Tuition cycle operation invalid"),
     STUDENT_NOT_ENROLLED(422, "Student is not actively enrolled in this class"),
+    ASSIGNMENT_HAS_GRADES(422, "Cannot delete assignment with graded scores"),
     INVITATION_EXPIRED(410, "Invitation expired"),
     INVITATION_USED(410, "Invitation already used"),
     PASSWORD_RESET_INVALID(410, "Password reset token expired or already used"),

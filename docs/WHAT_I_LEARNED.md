@@ -487,7 +487,64 @@
   - Khi buổi học có cảnh báo học sinh trùng lịch (`warnings.length > 0`): Giao diện hiển thị Alert cảnh báo màu vàng ngữ nghĩa liệt kê danh sách học sinh bị trùng giờ với lớp khác, đồng thời thông báo rõ buổi học vẫn được lưu vào hệ thống bình thường.
   - Tích hợp Modal sinh lịch hàng loạt từ quy tắc lặp (`GenerateSessionsModal`): Báo cáo trực quan số lượng buổi đã tạo thành công và danh sách chi tiết các ngày bị bỏ qua do trùng giờ gia sư.
 
+---
 
+## Task: T4.1 — Backend Điểm danh (Bulk Upsert, Transactional Rollback & Ownership)
 
+**Concepts & Architecture:**
+- **Bulk Upsert Điểm danh trong 1 Transaction (`@Transactional`):**
+  - **Quy tắc nghiệp vụ AC FR-4:** Điểm danh phải được thực hiện hàng loạt theo buổi học (`PUT /sessions/{id}/attendance`). Nếu trong danh sách gửi lên có bất kỳ `studentId` nào không có ghi danh hoạt động (`status = 'ACTIVE'`) trong lớp $\rightarrow$ toàn bộ request bị từ chối với `422 STUDENT_NOT_ENROLLED` và rollback toàn bộ transaction (không lưu lẻ tẻ bản ghi nào).
+  - Sử dụng cơ chế Upsert theo cặp khóa tự nhiên `(session_id, student_id)` có ràng buộc duy nhất `uk_attendance_session_student`: Nếu học sinh đã có bản ghi điểm danh trong buổi đó thì cập nhật trạng thái (`status`) và ghi chú (`note`), nếu chưa có thì chèn mới (`insert`).
+- **Phân định Trạng thái Điểm danh (`AttendanceStatus`):**
+  - 4 trạng thái theo chuẩn nghiệp vụ:
+    - `PRESENT`: Có mặt
+    - `LATE`: Đi muộn
+    - `ABSENT_EXCUSED`: Vắng có phép (theo D-14: vắng có phép không bị trừ buổi học phí)
+    - `ABSENT_UNEXCUSED`: Vắng không phép (bị trừ buổi học phí)
+  - Ràng buộc check constraint chặt chẽ tại DB: `CHECK (status IN ('PRESENT', 'LATE', 'ABSENT_EXCUSED', 'ABSENT_UNEXCUSED'))`.
+- **Jackson Deserialization Gotcha:**
+  - Enum trong request body phải khớp chính xác với tên định danh trong Java enum. Khi test gửi chuỗi không tồn tại trong enum (ví dụ `"ABSENT"` thay vì `"ABSENT_EXCUSED"`), Jackson văng `InvalidFormatException` $\rightarrow$ Spring đóng gói thành `HttpMessageNotReadableException` (400 Bad Request) thay vì lỗi validation thông thường.
+- **Bảo mật và Quyền xem Lịch sử Điểm danh:**
+  - `STUDENT`: Chỉ được xem lịch sử điểm danh của chính mình; cố tình truy vấn `studentId` của học sinh khác sẽ nhận `404 Not Found`.
+  - `PARENT`: Chỉ được xem lịch sử điểm danh của con mình đã được xác thực liên kết trong bảng `parent_students`.
+  - `TUTOR`: Chỉ xem được học sinh trong các lớp do mình phụ trách.
 
+---
+
+## Task: T4.2 — Frontend Màn Điểm danh Nhanh, Sửa lỗi CI/CD & Dọn dẹp Hơn 1000 Warnings
+
+**Concepts & Frontend Patterns:**
+- **Derived State Pattern thay thế `useEffect` đồng bộ dữ liệu:**
+  - **Vấn đề phổ biến:** Khi component nhận dữ liệu từ server (`enrollments` và `existingAttendance`), nếu dùng `useEffect` để gọi `setItems(...)`, React Compiler / Linter sẽ cảnh báo `react(set-state-in-effect)` vì gây ra render tầng (cascading renders) và dễ dẫn đến race condition.
+  - **Giải pháp tối ưu:** Sử dụng state cục bộ chỉ để lưu các thao tác chỉnh sửa của người dùng (`overrides: Record<number, { status?: AttendanceStatus; note?: string }>`). Toàn bộ danh sách hiển thị `items` được tính toán trực tiếp bằng `useMemo` kết hợp giữa `enrollments`, `existingAttendance` và `overrides`. Code hoàn toàn thuần khiết, phản hồi tức thì và không có render thừa.
+- **Tối ưu hóa Trải nghiệm Điểm danh (< 5 thao tác):**
+  - **Mặc định Có mặt:** Theo yêu cầu AC FR-4, khi gia sư mở màn điểm danh của buổi học chưa từng điểm danh, hệ thống tự động gán trạng thái mặc định là `PRESENT` cho toàn bộ học sinh active. Gia sư chỉ cần 1 nút bấm "Lưu điểm danh" là hoàn thành.
+  - **Lớp 1:1 (`ONE_ON_ONE`):** Hiển thị giao diện thẻ tối giản tập trung vào đúng 1 học sinh với 4 nút trạng thái to bản dễ bấm và ô ghi chú nhanh.
+  - **Lớp Nhóm (`GROUP`):** Hỗ trợ nút *"Tất cả có mặt"* 1 chạm, bảng học sinh responsive co giãn tốt từ màn hình di động 375px.
+- **Dọn dẹp Hơn 1000 Warnings & Sửa lỗi CI/CD:**
+  - **Căn nguyên CI/CD Backend GitHub Actions luôn fail:** Pipeline thiếu service container PostgreSQL khiến toàn bộ integration test bị `Connection refused` tới `localhost:5432`. Khắc phục bằng cách bổ sung `postgres:16-alpine` service container với health-check `pg_isready` trong `.github/workflows/ci.yml`.
+  - **Loại bỏ Hardcoded Docker Pipe:** Xóa cấu hình Windows Named Pipe (`npipe:////./pipe/dockerDesktopLinuxEngine`) trong `backend/pom.xml` surefire plugin để test chạy được trên cả Linux runner và máy dev Windows.
+  - **Xóa bỏ hơn 1000 warnings ảo trong VS Code:** Cài đặt `"java.compile.nullAnalysis.mode": "disabled"` trong `.vscode/settings.json`, ngăn chặn Eclipse JDT LS quét null-safety sai lệch trên toàn bộ thư viện Spring Boot/Lombok.
+  - **Tắt `spring.jpa.open-in-view`:** Thêm `open-in-view: false` vào `application.yml` loại bỏ cảnh báo OSIV của Spring Boot.
+
+---
+
+## Task: T5.1 — Backend Quản lý Bài tập, Thang điểm 10 cố định & Event-Driven Decoupling
+
+**Concepts & Architecture:**
+- **Thang điểm 10 Cố định, Không Trọng số/Hệ số (Decision D-30):**
+  - **Lý do thiết kế:** TutorHub là công cụ hỗ trợ gia sư quản lý lớp học thực tế và tinh gọn, không phải hệ thống LMS học đường phức tạp. Mọi bài kiểm tra hay bài tập về nhà đều được chấm trên thang điểm 10 chuẩn mực Việt Nam (từ 0.00 đến 10.00, lưu kiểu `numeric(4,2)` trong PostgreSQL và `BigDecimal` trong Java).
+  - Không hỗ trợ hệ số hay trọng số môn học để giữ hệ thống đơn giản, dễ tính điểm trung bình và báo cáo mà không phát sinh tranh cãi về công thức tính.
+- **Tự động Sinh Score Rows cho Học sinh ACTIVE & Event-Driven Decoupling (FR-5.1 & FR-5.2):**
+  - **Khi tạo bài tập (`createAssignment`):** Hệ thống lập tức truy vấn danh sách học sinh đang học (`status = 'ACTIVE'`) trong lớp và chèn các dòng điểm tương ứng (`status = ASSIGNED`, `score = null`).
+  - **Khi học sinh mới ghi danh vào lớp sau đó (FR-5.2):** Thay vì để `ClassService` phụ thuộc trực tiếp (tight coupling) vào `AssignmentService` (dễ gây vòng lặp phụ thuộc Circular Dependency giữa module `classroom` và `assignment`), ta áp dụng mô hình **Spring Event-Driven Architecture**:
+    - `ClassService` phát ra sự kiện: `eventPublisher.publishEvent(new StudentEnrolledEvent(classId, student));`.
+    - `AssignmentService` lắng nghe sự kiện với `@EventListener` và tự động bổ sung score rows cho học sinh mới vào các bài tập hiện có của lớp đó (`syncScoresForNewEnrolledStudent`).
+    - Cách làm này đảm bảo tính độc lập module cực cao (high cohesion, low coupling).
+- **Ràng buộc Toàn vẹn khi Xóa Bài tập (Integrity Protection):**
+  - Bài tập chưa có bất kỳ điểm nào được chấm (`score = null` hoặc không có bản ghi nào ở trạng thái `GRADED`) $\rightarrow$ Gia sư được phép xóa bài tập. Khi xóa, DB/JPA cascade xóa sạch các score rows rỗng liên quan.
+  - Bài tập **đã có ít nhất một điểm được chấm** (`score is not null` hoặc có trạng thái `GRADED`) $\rightarrow$ Hệ thống từ chối xóa và ném `422 ASSIGNMENT_HAS_GRADES` theo RFC 7807, bảo vệ lịch sử học tập và điểm số của học sinh khỏi bị xóa nhầm.
+- **Bảo mật và Quyền sở hữu (Ownership Enforcement):**
+  - `TUTOR`: Toàn quyền tạo, sửa, xóa bài tập của lớp do mình làm chủ; gọi sang lớp của gia sư khác bị trả về `404 Not Found`.
+  - `STUDENT`/`PARENT`: Chỉ được xem danh sách bài tập (`GET /classes/{id}/assignments`) và chi tiết (`GET /assignments/{id}`) của các lớp mà mình (hoặc con mình) đang theo học. Cố tình tạo, sửa, xóa sẽ bị Spring Security chặn ở mức `403 Forbidden`.
 

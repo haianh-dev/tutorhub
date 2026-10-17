@@ -46,6 +46,7 @@ public class ClassService {
     private final ClassEnrollmentRepository classEnrollmentRepository;
     private final UserRepository userRepository;
     private final ParentStudentRepository parentStudentRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     // ─── 1. Danh sách lớp (phân trang, filter status, search theo tên) ──────
 
@@ -246,6 +247,7 @@ public class ClassService {
         }
 
         enrollment = classEnrollmentRepository.save(enrollment);
+        eventPublisher.publishEvent(new com.tutorhub.classroom.event.StudentEnrolledEvent(classId, student));
         return EnrollmentResponse.from(enrollment);
     }
 

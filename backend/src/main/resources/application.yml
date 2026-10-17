@@ -16,6 +16,7 @@ spring:
 
   # JPA / Hibernate Configuration
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate # We use Flyway for schema changes
     show-sql: false

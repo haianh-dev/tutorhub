@@ -32,6 +32,7 @@ public enum ErrorCode {
     ONE_ON_ONE_FULL(422, "Lớp 1:1 chỉ có tối đa 1 học sinh đang học"),
     CLASS_TYPE_CHANGE_INVALID(422, "Cannot change class type due to active enrollment count"),
     CYCLE_INVALID(422, "Tuition cycle operation invalid"),
+    STUDENT_NOT_ENROLLED(422, "Student is not actively enrolled in this class"),
     INVITATION_EXPIRED(410, "Invitation expired"),
     INVITATION_USED(410, "Invitation already used"),
     PASSWORD_RESET_INVALID(410, "Password reset token expired or already used"),

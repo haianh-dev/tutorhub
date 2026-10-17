@@ -19,7 +19,7 @@ import type { Session } from '../../types';
 
 export const SchedulePage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [selectedClassId, setSelectedClassId] = useState<number | undefined>(undefined);
 
   // Modals state

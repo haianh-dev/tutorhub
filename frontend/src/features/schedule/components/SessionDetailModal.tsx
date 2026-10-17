@@ -35,8 +35,8 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
   const [conflictingId, setConflictingId] = useState<number | undefined>();
 
   // Format dates/times
-  const startDate = session ? new Date(session.startAt) : new Date();
-  const endDate = session ? new Date(session.endAt) : new Date();
+  const startDate = useMemo(() => session ? new Date(session.startAt) : new Date(0), [session?.startAt]);
+  const endDate = useMemo(() => session ? new Date(session.endAt) : new Date(0), [session?.endAt]);
 
   const pad = (n: number) => n.toString().padStart(2, '0');
   const dateStr = `${startDate.getUTCFullYear()}-${pad(startDate.getUTCMonth() + 1)}-${pad(startDate.getUTCDate())}`;

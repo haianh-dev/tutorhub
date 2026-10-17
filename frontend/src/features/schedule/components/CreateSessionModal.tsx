@@ -37,7 +37,7 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
   const [warnings, setWarnings] = useState<string[]>([]);
   const [conflictingId, setConflictingId] = useState<number | undefined>();
 
-  const defaultDate = initialDate || new Date().toISOString().split('T')[0];
+  const defaultDate = useMemo(() => initialDate || new Date().toISOString().split('T')[0], [initialDate]);
   const defaultClassId = initialClassId || (classes[0]?.id ?? 0);
 
   const {

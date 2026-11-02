@@ -12,7 +12,12 @@ import com.tutorhub.assignment.entity.SubmissionStatus;
 
 public interface AssignmentScoreRepository extends JpaRepository<AssignmentScoreEntity, Long> {
 
-    @Query("SELECT s FROM AssignmentScoreEntity s JOIN FETCH s.student WHERE s.assignment.id = :assignmentId ORDER BY s.student.fullName ASC")
+    @Query("SELECT s FROM AssignmentScoreEntity s " +
+           "JOIN FETCH s.student " +
+           "JOIN FETCH s.assignment a " +
+           "JOIN FETCH a.classroom c " +
+           "WHERE s.assignment.id = :assignmentId " +
+           "ORDER BY s.student.fullName ASC")
     List<AssignmentScoreEntity> findByAssignmentIdWithStudent(@Param("assignmentId") Long assignmentId);
 
     Optional<AssignmentScoreEntity> findByAssignmentIdAndStudentId(Long assignmentId, Long studentId);
@@ -23,7 +28,12 @@ public interface AssignmentScoreRepository extends JpaRepository<AssignmentScore
 
     boolean existsByAssignmentIdAndScoreIsNotNull(Long assignmentId);
 
-    @Query("SELECT s FROM AssignmentScoreEntity s JOIN FETCH s.assignment a JOIN FETCH a.classroom c WHERE s.student.id = :studentId AND (:classId IS NULL OR c.id = :classId) ORDER BY a.createdAt DESC")
+    @Query("SELECT s FROM AssignmentScoreEntity s " +
+           "JOIN FETCH s.assignment a " +
+           "JOIN FETCH a.classroom c " +
+           "JOIN FETCH s.student st " +
+           "WHERE s.student.id = :studentId AND (:classId IS NULL OR c.id = :classId) " +
+           "ORDER BY a.createdAt DESC")
     List<AssignmentScoreEntity> findByStudentIdAndOptionalClassId(
             @Param("studentId") Long studentId,
             @Param("classId") Long classId

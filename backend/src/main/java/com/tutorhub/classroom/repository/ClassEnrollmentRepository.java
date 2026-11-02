@@ -26,6 +26,8 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
 
     boolean existsByClazzIdAndStudentIdAndStatus(Long classId, Long studentId, EnrollmentStatus status);
 
+    boolean existsByClazzIdAndStudentId(Long classId, Long studentId);
+
     Optional<ClassEnrollment> findByClazzIdAndStudentId(Long classId, Long studentId);
 
     @Query("SELECT e.clazz.id AS classId, COUNT(e.id) AS studentCount " +

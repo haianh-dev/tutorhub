@@ -13,10 +13,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tutorhub.assignment.dto.AssignmentResponse;
+import com.tutorhub.assignment.dto.AssignmentScoreResponse;
+import com.tutorhub.assignment.dto.BulkUpdateScoresRequest;
 import com.tutorhub.assignment.dto.CreateAssignmentRequest;
 import com.tutorhub.assignment.dto.UpdateAssignmentRequest;
 import com.tutorhub.assignment.service.AssignmentService;
@@ -26,7 +29,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Controller quản lý Bài tập và Thang điểm 10 cố định (T5.1).
+ * Controller quản lý Bài tập và Thang điểm 10 cố định (T5.1, T5.2).
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -127,5 +130,63 @@ public class AssignmentController {
                 principal.role(),
                 id
         );
+    }
+
+    /**
+     * GET /api/v1/assignments/{id}/scores
+     * TUTOR/ADMIN xem bảng điểm cả lớp của bài tập (T5.2).
+     */
+    @GetMapping("/assignments/{id}/scores")
+    @PreAuthorize("hasAnyRole('TUTOR', 'ADMIN')")
+    public ResponseEntity<List<AssignmentScoreResponse>> getScoresByAssignment(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable("id") Long id
+    ) {
+        List<AssignmentScoreResponse> result = assignmentService.getScoresByAssignment(
+                principal.id(),
+                principal.role(),
+                id
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * PUT /api/v1/assignments/{id}/scores
+     * TUTOR/ADMIN nhập điểm và nhận xét bulk (thang điểm 10 cố định) (T5.2).
+     */
+    @PutMapping("/assignments/{id}/scores")
+    @PreAuthorize("hasAnyRole('TUTOR', 'ADMIN')")
+    public ResponseEntity<List<AssignmentScoreResponse>> bulkUpdateScores(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable("id") Long id,
+            @Valid @RequestBody BulkUpdateScoresRequest request
+    ) {
+        List<AssignmentScoreResponse> result = assignmentService.bulkUpdateScores(
+                principal.id(),
+                principal.role(),
+                id,
+                request
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * GET /api/v1/students/{studentId}/scores?classId=
+     * Xem điểm của một học sinh theo quyền (T5.2).
+     */
+    @GetMapping("/students/{studentId}/scores")
+    @PreAuthorize("hasAnyRole('TUTOR', 'STUDENT', 'PARENT', 'ADMIN')")
+    public ResponseEntity<List<AssignmentScoreResponse>> getStudentScores(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable("studentId") Long studentId,
+            @RequestParam(name = "classId", required = false) Long classId
+    ) {
+        List<AssignmentScoreResponse> result = assignmentService.getStudentScores(
+                principal.id(),
+                principal.role(),
+                studentId,
+                classId
+        );
+        return ResponseEntity.ok(result);
     }
 }

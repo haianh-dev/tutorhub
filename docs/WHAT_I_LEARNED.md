@@ -548,3 +548,29 @@
   - `TUTOR`: Toàn quyền tạo, sửa, xóa bài tập của lớp do mình làm chủ; gọi sang lớp của gia sư khác bị trả về `404 Not Found`.
   - `STUDENT`/`PARENT`: Chỉ được xem danh sách bài tập (`GET /classes/{id}/assignments`) và chi tiết (`GET /assignments/{id}`) của các lớp mà mình (hoặc con mình) đang theo học. Cố tình tạo, sửa, xóa sẽ bị Spring Security chặn ở mức `403 Forbidden`.
 
+---
+
+## Task: T5.2 — Backend Nhập điểm & Nhận xét Bulk (Thang điểm 10 cố định & Transactional Rollback)
+
+**Concepts & Architecture:**
+- **Kiểm định Điểm số Đa tầng (Multi-tier Boundary Validation):**
+  - **Tầng Bean Validation:** Sử dụng `@DecimalMin(value = "0.00")`, `@DecimalMax(value = "10.00")`, và `@Digits(integer = 2, fraction = 2)` trên trường `score` của `ScoreItemRequest`.
+    - Khi client gửi điểm âm (như `-0.1`) hoặc điểm vượt ngưỡng (như `10.1`), validation chặn ngay ở tầng Controller và trả về HTTP `400 Bad Request` với mã `VALIDATION_ERROR` mà không cần chạm xuống cơ sở dữ liệu.
+    - Điểm hợp lệ biên: `0.00` và `10.00` được chấp nhận bình thường.
+  - **Tầng Cơ sở dữ liệu (Defense-in-depth):** Ràng buộc Check Constraint `chk_score_range CHECK (score IS NULL OR (score >= 0 AND score <= 10))` đảm bảo tính toàn vẹn dữ liệu tuyệt đối ngay cả khi có script thao tác trực tiếp trên DB.
+- **Tính Toàn vẹn Giao dịch (Transactional All-or-Nothing Rollback - AC FR-5):**
+  - Điểm của cả lớp được gửi lên trong một mảng `scores` qua `PUT /assignments/{id}/scores`.
+  - Nếu trong mảng có bất kỳ `studentId` nào không có ghi danh trong lớp học này:
+    - Service lập tức ném lỗi `AppException(ErrorCode.STUDENT_NOT_ENROLLED)`.
+    - Nhờ annotation `@Transactional`, Spring Boot tự động kích hoạt rollback toàn bộ giao dịch, đảm bảo không có bất kỳ học sinh nào trong request bị lưu điểm dở dang.
+- **Tự động Đồng bộ Trạng thái Chấm bài:**
+  - Khi gia sư nhập điểm (`score != null`), nếu bản ghi đang ở trạng thái `ASSIGNED`, hệ thống tự động cập nhật sang `GRADED` và ghi nhận mốc thời gian chấm bài `gradedAt = Instant.now()`.
+  - Nếu gia sư xóa trắng điểm (`score == null`), trường `gradedAt` được xóa về `null`.
+- **Bảo vệ Dữ liệu Riêng tư (Grade Privacy & Access Control):**
+  - `GET /assignments/{id}/scores`: Chỉ TUTOR chủ nhiệm lớp học đó hoặc ADMIN mới được xem bảng điểm tổng hợp của toàn bộ lớp. TUTOR lớp khác cố tình truy cập sẽ nhận `404 Not Found`.
+  - `GET /students/{studentId}/scores?classId=`:
+    - `STUDENT`: Chỉ được xem bảng điểm của chính mình; cố tình truy vấn điểm của học sinh khác bị trả về `404 Not Found`.
+    - `PARENT`: Chỉ được xem bảng điểm của con mình (đã liên kết xác thực qua `parent_students`); truy vấn học sinh ngoài bị trả về `404 Not Found`.
+    - `TUTOR`: Bắt buộc phải truyền tham số `classId` để đảm bảo gia sư chỉ xem điểm trong phạm vi lớp mình giảng dạy, không bị lộ điểm số của học sinh ở các lớp/môn khác do gia sư khác dạy.
+
+

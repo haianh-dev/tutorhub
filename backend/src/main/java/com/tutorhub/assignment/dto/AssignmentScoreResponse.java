@@ -9,6 +9,9 @@ import com.tutorhub.assignment.entity.SubmissionStatus;
 public record AssignmentScoreResponse(
     Long id,
     Long assignmentId,
+    String assignmentTitle,
+    Long classId,
+    String className,
     Long studentId,
     String studentName,
     String studentEmail,
@@ -22,6 +25,9 @@ public record AssignmentScoreResponse(
         return new AssignmentScoreResponse(
             entity.getId(),
             entity.getAssignment().getId(),
+            entity.getAssignment().getTitle(),
+            entity.getAssignment().getClassroom() != null ? entity.getAssignment().getClassroom().getId() : null,
+            entity.getAssignment().getClassroom() != null ? entity.getAssignment().getClassroom().getName() : null,
             entity.getStudent().getId(),
             entity.getStudent().getFullName(),
             entity.getStudent().getEmail(),

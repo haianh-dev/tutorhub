@@ -8,6 +8,7 @@ import DashboardPage from '../features/dashboard/DashboardPage';
 import ClassesListPage from '../features/classes/ClassesListPage';
 import ClassDetailPage from '../features/classes/ClassDetailPage';
 import SchedulePage from '../features/schedule/SchedulePage';
+import AssignmentsPage from '../features/assignments/AssignmentsPage';
 import PlaceholderPage from '../components/PlaceholderPage';
 import DevUiPage from '../features/dev/DevUiPage';
 import LoginPage from '../features/auth/pages/LoginPage';
@@ -106,13 +107,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'assignments',
-            element: (
-              <PlaceholderPage
-                title="Bài tập & Bảng điểm"
-                description="Giao bài tập về nhà, bài kiểm tra và nhập điểm trực tiếp trên hệ thống."
-                phase="Phase 5 (T5.1 - T5.3)"
-              />
-            ),
+            element: <AssignmentsPage />,
           },
           {
             path: 'tuition',

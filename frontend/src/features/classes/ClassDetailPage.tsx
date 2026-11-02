@@ -13,6 +13,7 @@ import {
   Phone,
   AlertTriangle,
   BookOpen,
+  FileText,
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -171,42 +172,51 @@ export const ClassDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {!isArchived && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => setIsInviteOpen(true)}
-              >
-                <Share2 className="w-4 h-4" />
-                Mời học sinh / PH
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to={`/assignments?classId=${classroom.id}`}>
+              <Button variant="secondary">
+                <FileText className="w-4 h-4" />
+                Bài tập &amp; Điểm số
               </Button>
+            </Link>
 
-              <Button
-                variant="secondary"
-                onClick={() => setIsEditOpen(true)}
-              >
-                <Edit2 className="w-4 h-4" />
-                Sửa lớp
-              </Button>
+            {!isArchived && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => setIsInviteOpen(true)}
+                >
+                  <Share2 className="w-4 h-4" />
+                  Mời học sinh / PH
+                </Button>
 
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Bạn có chắc chắn muốn lưu trữ lớp "${classroom.name}"? Lớp sẽ không thể chỉnh sửa sau khi lưu trữ.`,
-                    )
-                  ) {
-                    archiveMutation.mutate(classroom.id);
-                  }
-                }}
-                isLoading={archiveMutation.isPending}
-              >
-                <Archive className="w-4 h-4 text-coral" />
-                Lưu trữ
-              </Button>
-            </div>
-          )}
+                <Button
+                  variant="secondary"
+                  onClick={() => setIsEditOpen(true)}
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Sửa lớp
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Bạn có chắc chắn muốn lưu trữ lớp "${classroom.name}"? Lớp sẽ không thể chỉnh sửa sau khi lưu trữ.`,
+                      )
+                    ) {
+                      archiveMutation.mutate(classroom.id);
+                    }
+                  }}
+                  isLoading={archiveMutation.isPending}
+                >
+                  <Archive className="w-4 h-4 text-coral" />
+                  Lưu trữ
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

@@ -573,4 +573,28 @@
     - `PARENT`: Chỉ được xem bảng điểm của con mình (đã liên kết xác thực qua `parent_students`); truy vấn học sinh ngoài bị trả về `404 Not Found`.
     - `TUTOR`: Bắt buộc phải truyền tham số `classId` để đảm bảo gia sư chỉ xem điểm trong phạm vi lớp mình giảng dạy, không bị lộ điểm số của học sinh ở các lớp/môn khác do gia sư khác dạy.
 
+---
+
+## Task: T5.3 — Frontend Quản lý Bài tập & Bảng nhập điểm cả lớp (Neubrutalism UI & Derived State Pattern)
+
+**Concepts & Architecture:**
+- **Mô hình Dẫn xuất Trạng thái (Derived State Pattern) thay cho `useEffect` + `setState`:**
+  - Trong React 19 và các chuẩn linter hiện đại (`oxlint`, `@eslint-react`), việc đồng bộ server data hoặc URL search params vào local component state thông qua `useEffect` rồi gọi `setState` đồng bộ sẽ bị cảnh báo `react(set-state-in-effect)` vì gây ra "cascading renders" (component bị render lại 2 lần không cần thiết).
+  - *Giải pháp triệt để:*
+    - Trang `AssignmentsPage`: Không lưu `selectedClassId` vào state rồi `useEffect` đồng bộ. Thay vào đó, chỉ lưu `internalClassId` khi người dùng chọn dropdown, và dẫn xuất `selectedClassId` qua `useMemo`: ưu tiên `urlClassId` $\rightarrow$ `internalClassId` $\rightarrow$ lớp đầu tiên `classes[0]?.id`.
+    - Modal `GradeAssignmentModal`: Không sao chép toàn bộ mảng `scores` từ TanStack Query vào `useState`. Thay vào đó, chỉ lưu một dictionary `overrides` (`Record<number, Partial<ScoreItem>>`) chứa những dòng người dùng đã chỉnh sửa. Danh sách hiển thị `items` được tính tức thì bằng cách merge `serverScores` với `overrides`. Khi đóng modal hoặc lưu thành công, chỉ cần reset `overrides` về rỗng `{}`.
+- **Trải nghiệm Nhập điểm Cả lớp Tối ưu cho Gia sư (UX Optimization):**
+  - **Phím tắt 1 chạm (Quick Actions):** Nút "Tất cả đã nộp" và "Tất cả đã chấm" cho phép gia sư chuyển nhanh trạng thái của toàn bộ học sinh trong lớp mà không phải click từng dòng.
+  - **Thống kê Thời gian Thực (Live Stats):** Số học sinh đã chấm và Điểm trung bình (GPA) của lớp được tự động tính toán tức thì theo từng phím gõ điểm của gia sư.
+  - **Kiểm định Thang điểm 10 Cố định (D-30):**
+    - Input HTML5 hỗ trợ `min="0" max="10" step="0.25"` cho phép nhập điểm lẻ (như `8.5`, `9.25`).
+    - Inline validation: Cảnh báo chữ đỏ ngay tại ô nhập điểm và vô hiệu hóa nút "Lưu bảng điểm" nếu có bất kỳ điểm số nào vi phạm $score < 0$ hoặc $score > 10$.
+- **Đồng bộ Tham số URL (Deep Linking & URL Search Params):**
+  - Trang `/assignments` đọc tham số `?classId=` từ URL. Khi gia sư bấm nút "Bài tập & Điểm số" từ trang chi tiết lớp học (`ClassDetailPage`), trang lập tức mở đúng lớp học tương ứng.
+  - Khi gia sư đổi lớp từ dropdown, component gọi `setSearchParams({ classId })` giúp gia sư có thể bookmark hoặc chia sẻ link bài tập trực tiếp.
+- **Phong cách Neubrutalism Đồng bộ và Hoàn chỉnh:**
+  - Sử dụng các UI components chuẩn: `Card`, `Badge`, `Button`, `StatTileGroup`, `Alert`, `EmptyState`.
+  - Mọi màn hình và modal đều có đầy đủ 3 trạng thái: Loading (skeleton/pulse), Error (báo lỗi tiếng Việt theo mã RFC 7807), và Empty (trạng thái rỗng kèm nút kêu gọi hành động Giao bài tập đầu tiên).
+
+
 
